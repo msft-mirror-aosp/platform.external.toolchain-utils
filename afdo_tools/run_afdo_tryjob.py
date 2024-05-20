@@ -47,7 +47,6 @@ If you provide neither --use_afdo_generation_stage nor
 since it's safer.
 """
 
-
 import argparse
 import collections
 import pipes
@@ -114,12 +113,13 @@ def main():
         tag_profiles_with_current_time = True
 
     patches = [
-        # Send profiles to localmirror instead of chromeos-prebuilt. This should
-        # always be done, since sending profiles into production is bad. :)
+        # Send profiles to localmirror instead of chromeos-prebuilt. This
+        # should always be done, since sending profiles into production is
+        # bad. :)
         # https://chromium-review.googlesource.com/c/chromiumos/third_party/autotest/+/1436158
         1436158,
-        # Force profile generation. Otherwise, we'll decide to not spawn off the
-        # perf hwtests.
+        # Force profile generation. Otherwise, we'll decide to not spawn off
+        # the perf hwtests.
         # https://chromium-review.googlesource.com/c/chromiumos/chromite/+/1313291
         1313291,
     ]
@@ -132,8 +132,8 @@ def main():
         patches.append(1436157)
 
     if use_afdo_generation_stage:
-        # Make the profile generation stage look in localmirror, instead of having
-        # it look in chromeos-prebuilt. Without this, we'll never upload
+        # Make the profile generation stage look in localmirror, instead of
+        # having it look in chromeos-prebuilt. Without this, we'll never upload
         # chrome.debug or try to generate an AFDO profile.
         # https://chromium-review.googlesource.com/c/chromiumos/chromite/+/1436583
         patches.append(1436583)
@@ -144,7 +144,8 @@ def main():
         )
 
     for patch in user_patches:
-        # We accept two formats. Either a URL that ends with a number, or a number.
+        # We accept two formats. Either a URL that ends with a number, or a
+        # number.
         if patch.startswith("http"):
             patch = patch.split("/")[-1]
         patches.append(int(patch))
