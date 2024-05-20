@@ -12,14 +12,11 @@ failing step is fixed. Example usage to create a new version:
 
 1. (outside chroot) $ ./rust_tools/rust_uprev.py            \\
                      --state_file /tmp/rust-to-1.60.0.json  \\
-                     roll --uprev 1.60.0
+                     --uprev 1.60.0
 2. Step "compile rust" failed due to the patches can't apply to new version.
 3. Manually fix the patches.
-4. Execute the command in step 1 again, but add "--continue" before "roll".
+4. Execute the command in step 1 again, but add "--continue".
 5. Iterate 1-4 for each failed step until the tool passes.
-
-Besides "roll", the tool also support subcommands that perform
-various parts of an uprev.
 
 See `--help` for all available options.
 """
@@ -273,9 +270,7 @@ def parse_commandline_args() -> argparse.Namespace:
         action="store_true",
         help="Continue the steps from the state file",
     )
-
-    create_parser_template = argparse.ArgumentParser(add_help=False)
-    create_parser_template.add_argument(
+    parser.add_argument(
         "--template",
         type=RustVersion.parse,
         default=None,
@@ -283,76 +278,36 @@ def parse_commandline_args() -> argparse.Namespace:
         "a.b.c The ebuild has to exist in the chroot. If not specified, the "
         "tool will use the current Rust version in the chroot as template.",
     )
-    create_parser_template.add_argument(
+    parser.add_argument(
         "--skip_compile",
         action="store_true",
         help="Skip compiling rust to test the tool. Only for testing",
     )
-
-    subparsers = parser.add_subparsers(dest="subparser_name")
-    subparser_names = []
-    subparser_names.append("create")
-    create_parser = subparsers.add_parser(
-        "create",
-        parents=[create_parser_template],
-        help="Create changes uprevs Rust to a new version",
-    )
-    create_parser.add_argument(
-        "--rust_version",
-        type=RustVersion.parse,
-        required=True,
-        help="Rust version to uprev to, in the form a.b.c",
-    )
-
-    subparser_names.append("remove")
-    remove_parser = subparsers.add_parser(
-        "remove",
-        help="Clean up old Rust version from chroot",
-    )
-    remove_parser.add_argument(
-        "--rust_version",
-        type=RustVersion.parse,
-        default=None,
-        help="Rust version to remove, in the form a.b.c If not "
-        "specified, the tool will remove the oldest version in the chroot",
-    )
-
-    subparser_names.append("roll")
-    roll_parser = subparsers.add_parser(
-        "roll",
-        parents=[create_parser_template],
-        help="A command can create and upload a Rust uprev CL, including "
-        "preparing the repo, creating new Rust uprev, deleting old uprev, "
-        "and upload a CL to crrev.",
-    )
-    roll_parser.add_argument(
+    parser.add_argument(
         "--uprev",
         type=RustVersion.parse,
         required=True,
         help="Rust version to uprev to, in the form a.b.c",
     )
-    roll_parser.add_argument(
+    parser.add_argument(
         "--remove",
         type=RustVersion.parse,
         default=None,
         help="Rust version to remove, in the form a.b.c If not "
         "specified, the tool will remove the oldest version in the chroot",
     )
-    roll_parser.add_argument(
+    parser.add_argument(
         "--skip_cross_compiler",
         action="store_true",
         help="Skip updating cross-compiler in the chroot",
     )
-    roll_parser.add_argument(
+    parser.add_argument(
         "--no_upload",
         action="store_true",
         help="If specified, the tool will not upload the CL for review",
     )
 
     args = parser.parse_args()
-    if args.subparser_name not in subparser_names:
-        parser.error("one of %s must be specified" % subparser_names)
-
     if args.cont and args.restart:
         parser.error("Please select either --continue or --restart")
 
@@ -1139,41 +1094,25 @@ def main() -> None:
             result_to_json,
         )
 
-    if args.subparser_name == "create":
-        sudo_keepalive()
-        create_rust_uprev(
-            args.rust_version, args.template, args.skip_compile, run_step
-        )
-    elif args.subparser_name == "remove":
-        remove_rust_uprev(args.rust_version, run_step)
-    else:
-        # If you have added more subparser_name, please also add the handlers
-        # above
-        assert args.subparser_name == "roll"
+    sudo_keepalive()
+    # Determine the template version, if not given.
+    template_version = args.template
+    if template_version is None:
+        rust_ebuild = find_ebuild_for_package("dev-lang/rust")
+        template_version = RustVersion.parse_from_ebuild(rust_ebuild)
 
-        sudo_keepalive()
-        # Determine the template version, if not given.
-        template_version = args.template
-        if template_version is None:
-            rust_ebuild = find_ebuild_for_package("dev-lang/rust")
-            template_version = RustVersion.parse_from_ebuild(rust_ebuild)
-
+    run_step(
+        "create rust upgrade branch",
+        lambda: create_rust_uprev_branch(args.uprev),
+    )
+    if not args.skip_cross_compiler:
         run_step(
-            "create rust upgrade branch",
-            lambda: create_rust_uprev_branch(args.uprev),
+            "build cross compiler",
+            lambda: build_cross_compiler(template_version),
         )
-        if not args.skip_cross_compiler:
-            run_step(
-                "build cross compiler",
-                lambda: build_cross_compiler(template_version),
-            )
-        create_rust_uprev(
-            args.uprev, template_version, args.skip_compile, run_step
-        )
-        remove_rust_uprev(args.remove, run_step)
-        prepared = prepare_uprev_from_json(completed_steps["prepare uprev"])
-        assert prepared is not None, "no prepared uprev decoded from JSON"
-        if not args.no_upload:
-            run_step(
-                "create rust uprev CL", lambda: create_new_commit(args.uprev)
-            )
+    create_rust_uprev(args.uprev, template_version, args.skip_compile, run_step)
+    remove_rust_uprev(args.remove, run_step)
+    prepared = prepare_uprev_from_json(completed_steps["prepare uprev"])
+    assert prepared is not None, "no prepared uprev decoded from JSON"
+    if not args.no_upload:
+        run_step("create rust uprev CL", lambda: create_new_commit(args.uprev))
