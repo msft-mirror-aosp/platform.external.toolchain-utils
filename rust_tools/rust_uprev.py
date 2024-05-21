@@ -22,7 +22,6 @@ See `--help` for all available options.
 """
 
 import argparse
-import functools
 import json
 import logging
 import os
@@ -30,7 +29,6 @@ import pathlib
 from pathlib import Path
 import re
 import shlex
-import shutil
 import subprocess
 import textwrap
 import threading
@@ -51,6 +49,7 @@ import urllib.request
 
 from cros_utils import git_utils
 from llvm_tools import chroot
+from pgo_tools_rust import pgo_rust
 
 
 T = TypeVar("T")
@@ -304,20 +303,6 @@ def parse_commandline_args() -> argparse.Namespace:
     return args
 
 
-def create_ebuild(
-    category: str,
-    name: str,
-    template_version: RustVersion,
-    new_version: RustVersion,
-) -> None:
-    template_ebuild = compute_ebuild_path(category, name, template_version)
-    new_ebuild = compute_ebuild_path(category, name, new_version)
-    shutil.copyfile(template_ebuild, new_ebuild)
-    subprocess.check_call(
-        ["git", "add", new_ebuild.name], cwd=new_ebuild.parent
-    )
-
-
 def set_include_profdata_src(ebuild_path: os.PathLike, include: bool) -> None:
     """Changes an ebuild file to include or omit profile data from SRC_URI.
 
@@ -345,21 +330,30 @@ def set_include_profdata_src(ebuild_path: os.PathLike, include: bool) -> None:
     Path(ebuild_path).write_text(contents, encoding="utf-8")
 
 
-def update_bootstrap_version(
-    path: PathOrStr, new_bootstrap_version: RustVersion
+def update_ebuild_variable_version(
+    path: PathOrStr, variable_name: str, new_version: RustVersion
 ) -> None:
     path = Path(path)
     contents = path.read_text(encoding="utf-8")
     contents, subs = re.subn(
-        r"^BOOTSTRAP_VERSION=.*$",
-        'BOOTSTRAP_VERSION="%s"' % (new_bootstrap_version,),
+        r"^" + re.escape(variable_name) + r"=.*$",
+        f'{variable_name}="{new_version}"',
         contents,
         flags=re.MULTILINE,
     )
     if not subs:
-        raise RuntimeError(f"BOOTSTRAP_VERSION not found in {path}")
+        raise RuntimeError(f"{variable_name} not found in {path}")
     path.write_text(contents, encoding="utf-8")
-    logging.info("Rust BOOTSTRAP_VERSION updated to %s", new_bootstrap_version)
+    logging.info("Rust %s updated to %s", variable_name, new_version)
+
+
+def cros_workon(start_or_stop: str, packages: List[str]) -> None:
+    """Runs `cros-workon` on the given host packages."""
+    subprocess.run(
+        ["cros", "workon", "--host", start_or_stop] + packages,
+        check=True,
+        stdin=subprocess.DEVNULL,
+    )
 
 
 def ebuild_actions(
@@ -649,25 +643,37 @@ def create_rust_uprev(
     # to the mirror.
     run_step("fetch rust distfiles", lambda: fetch_rust_distfiles(rust_version))
     run_step(
-        "update bootstrap version",
-        lambda: update_bootstrap_version(CROS_RUSTC_ECLASS, template_version),
+        "update cros-rustc.eclass bootstrap version",
+        lambda: update_ebuild_variable_version(
+            CROS_RUSTC_ECLASS, "BOOTSTRAP_VERSION", template_version
+        ),
     )
+
+    run_step(
+        "update cros-rustc.eclass rust version",
+        lambda: update_ebuild_variable_version(
+            CROS_RUSTC_ECLASS, "RUSTC_STABLE_VERSION", rust_version
+        ),
+    )
+
+    rust_workon_packages = ["dev-lang/rust-host"]
+    # Add all cross-compiler packages, except for host packages, which don't
+    # have a `rust` to install.
+    rust_workon_packages += (
+        f"cross-{x}/rust"
+        for x in pgo_rust.TARGET_TRIPLES
+        if not x.endswith("pc-linux-gnu")
+    )
+
+    run_step(
+        "cros-workon rust packages",
+        lambda: cros_workon("start", rust_workon_packages),
+    )
+
     run_step(
         "turn off profile data sources in cros-rustc.eclass",
         lambda: set_include_profdata_src(CROS_RUSTC_ECLASS, include=False),
     )
-
-    for category, name in RUST_PACKAGES:
-        run_step(
-            f"create new {category}/{name} ebuild",
-            functools.partial(
-                create_ebuild,
-                category,
-                name,
-                template_version,
-                rust_version,
-            ),
-        )
 
     run_step(
         "update dev-lang/rust-host manifest to add new version",
@@ -697,7 +703,15 @@ def create_rust_uprev(
         lambda: ebuild_actions("dev-lang/rust-host", ["manifest"]),
     )
     if not skip_compile:
-        run_step("build packages", lambda: rebuild_packages(rust_version))
+        run_step(
+            "build packages", lambda: rebuild_packages(rust_workon_packages)
+        )
+
+    run_step(
+        "cros-workon stop rust packages",
+        lambda: cros_workon("stop", rust_workon_packages),
+    )
+
     run_step(
         "insert host version into rust packages",
         lambda: update_rust_packages(
@@ -731,31 +745,23 @@ def find_ebuild_for_rust_version(version: RustVersion) -> Path:
     return find_ebuild_path(RUST_PATH, "rust", version)
 
 
-def rebuild_packages(version: RustVersion):
+def rebuild_packages(workon_packages: List[str]):
     """Rebuild packages modified by this script."""
-    # Remove all packages we modify to avoid depending on preinstalled
-    # versions. This ensures that the packages can really be built.
-    packages = [f"{category}/{name}" for category, name in RUST_PACKAGES]
-    for pkg in packages:
-        unmerge_package_if_installed(pkg)
-    # Mention only dev-lang/rust explicitly, so that others are pulled
-    # in as dependencies (letting us detect dependency errors).
-    # Packages we modify are listed in --usepkg-exclude to ensure they
-    # are built from source.
     try:
         run_in_chroot(
             [
                 "sudo",
                 "emerge",
+                # Use unlimited jobs, since we should only be emerging a small
+                # handful of packages.
+                "--jobs",
                 "--quiet-build",
-                "--usepkg-exclude",
-                " ".join(packages),
-                f"=dev-lang/rust-{version}",
-            ],
+            ]
+            + workon_packages,
         )
     except:
         logging.warning(
-            "Failed to build dev-lang/rust or one of its dependencies."
+            "Failed to build rust or one of its dependencies."
             " If necessary, you can restore rust and rust-host from"
             " binary packages:\n  sudo emerge --getbinpkgonly dev-lang/rust"
         )

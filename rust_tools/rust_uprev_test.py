@@ -6,7 +6,6 @@
 
 import os
 from pathlib import Path
-import shutil
 import subprocess
 import tempfile
 import unittest
@@ -527,14 +526,20 @@ some code here
             mock_write_text.assert_not_called()
 
 
-class UpdateBootstrapVersionTest(unittest.TestCase):
-    """Tests for update_bootstrap_version step in rust_uprev"""
+class UpdateEbuildVariableVersionTest(unittest.TestCase):
+    """Tests for update_ebuild_variable_version function in rust_uprev"""
 
     ebuild_file_before = """
+SOME_OTHER_VAR=foo
+# Comment
 BOOTSTRAP_VERSION="1.2.0"
+SOME_OTHER_VAR2=baz
     """
     ebuild_file_after = """
+SOME_OTHER_VAR=foo
+# Comment
 BOOTSTRAP_VERSION="1.3.6"
+SOME_OTHER_VAR2=baz
     """
 
     def setUp(self):
@@ -545,8 +550,10 @@ BOOTSTRAP_VERSION="1.3.6"
         # ebuild_file and new bootstrap version are deliberately different
         ebuild_file = "/path/to/rust/cros-rustc.eclass"
         with mock.patch("pathlib.Path.write_text") as mock_write_text:
-            rust_uprev.update_bootstrap_version(
-                ebuild_file, rust_uprev.RustVersion.parse("1.3.6")
+            rust_uprev.update_ebuild_variable_version(
+                ebuild_file,
+                "BOOTSTRAP_VERSION",
+                rust_uprev.RustVersion.parse("1.3.6"),
             )
             mock_write_text.assert_called_once_with(
                 self.ebuild_file_after, encoding="utf-8"
@@ -555,14 +562,16 @@ BOOTSTRAP_VERSION="1.3.6"
     def test_fail_when_ebuild_misses_a_variable(self):
         self.mock_read_text.return_value = ""
         ebuild_file = "/path/to/rust/rust-1.3.5.ebuild"
-        with self.assertRaises(RuntimeError) as context:
-            rust_uprev.update_bootstrap_version(
-                ebuild_file, rust_uprev.RustVersion.parse("1.2.0")
+        with self.assertRaisesRegex(
+            RuntimeError,
+            r"^BOOTSTRAP_VERSION not found in "
+            r"/path/to/rust/rust-1\.3\.5\.ebuild$",
+        ):
+            rust_uprev.update_ebuild_variable_version(
+                ebuild_file,
+                "BOOTSTRAP_VERSION",
+                rust_uprev.RustVersion.parse("1.2.0"),
             )
-        self.assertEqual(
-            "BOOTSTRAP_VERSION not found in /path/to/rust/rust-1.3.5.ebuild",
-            str(context.exception),
-        )
 
 
 class UpdateRustPackagesTests(unittest.TestCase):
@@ -624,52 +633,6 @@ class RustUprevOtherStagesTests(unittest.TestCase):
         self.new_version = rust_uprev.RustVersion(1, 3, 5)
         self.ebuild_file = os.path.join(
             rust_uprev.RUST_PATH, "rust-{self.new_version}.ebuild"
-        )
-
-    @mock.patch.object(shutil, "copyfile")
-    @mock.patch.object(subprocess, "check_call")
-    def test_create_rust_ebuild(self, mock_call, mock_copy):
-        template_ebuild = (
-            rust_uprev.EBUILD_PREFIX
-            / f"dev-lang/rust/rust-{self.current_version}.ebuild"
-        )
-        new_ebuild = (
-            rust_uprev.EBUILD_PREFIX
-            / f"dev-lang/rust/rust-{self.new_version}.ebuild"
-        )
-        rust_uprev.create_ebuild(
-            "dev-lang", "rust", self.current_version, self.new_version
-        )
-        mock_copy.assert_called_once_with(
-            template_ebuild,
-            new_ebuild,
-        )
-        mock_call.assert_called_once_with(
-            ["git", "add", f"rust-{self.new_version}.ebuild"],
-            cwd=new_ebuild.parent,
-        )
-
-    @mock.patch.object(shutil, "copyfile")
-    @mock.patch.object(subprocess, "check_call")
-    def test_create_rust_host_ebuild(self, mock_call, mock_copy):
-        template_ebuild = (
-            rust_uprev.EBUILD_PREFIX
-            / f"dev-lang/rust-host/rust-host-{self.current_version}.ebuild"
-        )
-        new_ebuild = (
-            rust_uprev.EBUILD_PREFIX
-            / f"dev-lang/rust-host/rust-host-{self.new_version}.ebuild"
-        )
-        rust_uprev.create_ebuild(
-            "dev-lang", "rust-host", self.current_version, self.new_version
-        )
-        mock_copy.assert_called_once_with(
-            template_ebuild,
-            new_ebuild,
-        )
-        mock_call.assert_called_once_with(
-            ["git", "add", f"rust-host-{self.new_version}.ebuild"],
-            cwd=new_ebuild.parent,
         )
 
     @mock.patch.object(rust_uprev, "get_command_output")
