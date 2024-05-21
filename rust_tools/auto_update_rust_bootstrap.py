@@ -236,16 +236,19 @@ def parse_ebuild_version(ebuild_name: str) -> EbuildVersion:
     )
 
 
-def collect_ebuilds_by_version(
+def collect_stable_ebuilds_by_version(
     ebuild_dir: Path,
 ) -> List[Tuple[EbuildVersion, Path]]:
     """Returns the latest ebuilds grouped by version.without_rev.
 
-    Result is always sorted by version, latest versions are last.
+    Result is always sorted by version, latest versions are last. 9999 ebuilds
+    are ignored.
     """
     ebuilds = ebuild_dir.glob("*.ebuild")
     versioned_ebuilds: Dict[EbuildVersion, Tuple[EbuildVersion, Path]] = {}
     for ebuild in ebuilds:
+        if ebuild.name.endswith("-9999.ebuild"):
+            continue
         version = parse_ebuild_version(ebuild.name)
         version_no_rev = version.without_rev()
         other = versioned_ebuilds.get(version_no_rev)
@@ -392,7 +395,9 @@ def maybe_add_newest_prebuilts(
     """
     # A list of (version, maybe_prebuilt_location).
     versions_updated: List[Tuple[EbuildVersion, Optional[str]]] = []
-    for version, ebuild in collect_ebuilds_by_version(rust_bootstrap_dir):
+    for version, ebuild in collect_stable_ebuilds_by_version(
+        rust_bootstrap_dir
+    ):
         logging.info("Inspecting %s...", ebuild)
         if version.without_rev() in read_bootstrap_sequence_from_ebuild(ebuild):
             logging.info("Prebuilt already exists for %s.", ebuild)
@@ -495,14 +500,14 @@ def maybe_add_new_rust_bootstrap_version(
     (
         newest_bootstrap_version,
         newest_bootstrap_ebuild,
-    ) = collect_ebuilds_by_version(rust_bootstrap_dir)[-1]
+    ) = collect_stable_ebuilds_by_version(rust_bootstrap_dir)[-1]
 
     logging.info(
         "Detected newest rust-bootstrap version: %s", newest_bootstrap_version
     )
 
     rust_dir = rust_dir_from_rust_bootstrap(rust_bootstrap_dir)
-    newest_rust_version, _ = collect_ebuilds_by_version(rust_dir)[-1]
+    newest_rust_version, _ = collect_stable_ebuilds_by_version(rust_dir)[-1]
     logging.info("Detected newest rust version: %s", newest_rust_version)
 
     # Generally speaking, we don't care about keeping up with new patch
@@ -618,12 +623,14 @@ def maybe_delete_old_rust_bootstrap_ebuilds(
         other ebuilds linking to it. It's still 'needed' in this case, but with
         some human intervention, it can be removed.
     """
-    rust_bootstrap_versions = collect_ebuilds_by_version(rust_bootstrap_dir)
+    rust_bootstrap_versions = collect_stable_ebuilds_by_version(
+        rust_bootstrap_dir
+    )
     logging.info(
         "Current rust-bootstrap versions: %s",
         [x for x, _ in rust_bootstrap_versions],
     )
-    rust_versions = collect_ebuilds_by_version(
+    rust_versions = collect_stable_ebuilds_by_version(
         rust_dir_from_rust_bootstrap(rust_bootstrap_dir)
     )
     # rust_versions is sorted, so taking the last is the same as max().

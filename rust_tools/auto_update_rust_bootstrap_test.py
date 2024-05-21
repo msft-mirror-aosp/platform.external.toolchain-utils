@@ -95,7 +95,7 @@ class Test(unittest.TestCase):
         self.assertEqual(start, len(ebuild_lines) - 4)
         self.assertEqual(end, len(ebuild_lines) - 1)
 
-    def test_collect_ebuilds_by_version_ignores_older_versions(self):
+    def test_collect_ebuilds_by_version_ignores_old_versions_and_9999(self):
         tempdir = self.make_tempdir()
         ebuild_170 = tempdir / "rust-bootstrap-1.70.0.ebuild"
         ebuild_170.touch()
@@ -103,9 +103,12 @@ class Test(unittest.TestCase):
         ebuild_170_r1.touch()
         ebuild_171_r2 = tempdir / "rust-bootstrap-1.71.1-r2.ebuild"
         ebuild_171_r2.touch()
+        (tempdir / "rust-bootstrap-9999.ebuild").touch()
 
         self.assertEqual(
-            auto_update_rust_bootstrap.collect_ebuilds_by_version(tempdir),
+            auto_update_rust_bootstrap.collect_stable_ebuilds_by_version(
+                tempdir
+            ),
             [
                 (
                     auto_update_rust_bootstrap.EbuildVersion(
