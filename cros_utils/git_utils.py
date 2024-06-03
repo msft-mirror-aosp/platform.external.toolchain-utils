@@ -259,7 +259,7 @@ def commit_all_changes(git_dir: Path, message: str) -> str:
     return resolve_ref(git_dir, "HEAD")
 
 
-def fetch_and_checkout(git_dir: Path, remote: str, branch: str) -> str:
+def fetch_and_checkout(git_dir: Path, remote: str, branch: str) -> None:
     """Fetches contents of `git_dir`, and checks out `remote/branch`."""
     logging.info(
         "Fetching %s and checking out to %s/%s...", git_dir, remote, branch
