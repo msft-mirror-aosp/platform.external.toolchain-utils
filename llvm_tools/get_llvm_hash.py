@@ -155,59 +155,6 @@ def GetLLVMMajorVersion(git_hash: Optional[str] = None) -> str:
     )
 
 
-@contextlib.contextmanager
-def CreateTempLLVMRepo(temp_dir: str) -> Iterator[str]:
-    """Adds a LLVM worktree to 'temp_dir'.
-
-    Creating a worktree because the LLVM source tree in
-    '../toolchain-utils/llvm_tools/llvm-project-copy' should not be modified.
-
-    This is useful for applying patches to a source tree but do not want to
-    modify the actual LLVM source tree in 'llvm-project-copy'.
-
-    Args:
-        temp_dir: An absolute path to the temporary directory to put the
-        worktree in (obtained via 'tempfile.mkdtemp()').
-
-    Yields:
-        The absolute path to 'temp_dir'.
-
-    Raises:
-        subprocess.CalledProcessError: Failed to remove the worktree.
-        ValueError: Failed to add a worktree.
-    """
-
-    abs_path_to_llvm_project_dir = GetAndUpdateLLVMProjectInLLVMTools()
-    subprocess_helpers.CheckCommand(
-        [
-            "git",
-            "-C",
-            abs_path_to_llvm_project_dir,
-            "worktree",
-            "add",
-            "--detach",
-            temp_dir,
-            "origin/%s" % git_llvm_rev.MAIN_BRANCH,
-        ]
-    )
-
-    try:
-        yield temp_dir
-    finally:
-        if os.path.isdir(temp_dir):
-            subprocess_helpers.check_output(
-                [
-                    "git",
-                    "-C",
-                    abs_path_to_llvm_project_dir,
-                    "worktree",
-                    "remove",
-                    "-f",
-                    temp_dir,
-                ]
-            )
-
-
 def GetAndUpdateLLVMProjectInLLVMTools() -> str:
     """Gets the absolute path to 'llvm-project-copy' directory in 'llvm_tools'.
 
