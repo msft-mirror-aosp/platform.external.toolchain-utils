@@ -7,6 +7,7 @@
 import argparse
 import contextlib
 import dataclasses
+import fcntl
 import functools
 import logging
 import os
@@ -136,6 +137,82 @@ def GetLLVMMajorVersion(git_hash: Optional[str] = None) -> str:
     )
 
 
+def _LockAndCloneLLVMProject(clone_target: Path, tmpdir_path: Path):
+    """Creates and locks `tmpdir_path`, and clones LLVM into it.
+
+    Multithreading and multiprocessing safe.
+
+    Args:
+        clone_target: Where to place llvm-project.
+        tmpdir_path: A temporary directory to sync llvm-project in. Must share
+            the same parent directory as clone_target.
+    """
+    # This code is subtle, and relies on Linux guarantees outlined here:
+    # https://www.kernel.org/doc/Documentation/filesystems/directory-locking
+    #
+    # Specifically, this heavily leverages the idea that there's a total
+    # ordering of dirent additions/removals for each directory in a file
+    # system.
+    assert (
+        tmpdir_path.parent == clone_target.parent
+    ), f"{tmpdir_path} and {clone_target} must share a parent."
+
+    # `exist_ok=True` covers races with other processes.
+    tmpdir_path.mkdir(exist_ok=True)
+    try:
+        tmpdir_fd = os.open(tmpdir_path, os.O_RDONLY | os.O_DIRECTORY)
+    except FileNotFoundError:
+        # If this isn't found, another process removed this dir. This code
+        # _only_ removes this dir on a successful sync, so it must be that the
+        # sync was successful.
+        assert (
+            clone_target.exists()
+        ), f"{clone_target} should exist if {tmpdir_path} doesn't."
+        return
+
+    try:
+        # Note that the lock is implicitly unlocked by the
+        # `os.close(tmpdir_fd)` in the `finally` block.
+        fcntl.flock(tmpdir_fd, fcntl.LOCK_EX)
+
+        # If a racing sync succeeded, exit early. Note that the existence of
+        # `clone_target` implies that our lock of `tmpdir_fd` may be
+        # non-exclusive (see the comment above `os.rename` below for more), as
+        # racing processes might've removed & recreated `tmpdir_path` since
+        # this one opened it.
+        if clone_target.exists():
+            # Catch FileNotFoundError due to non-exclusivity. In any case, it
+            # must be empty, since syncs are never started if `clone_target`
+            # exists.
+            try:
+                tmpdir_path.rmdir()
+            except FileNotFoundError:
+                pass
+            return
+
+        # Clean up from any potentially-incomplete racing syncs.
+        for child in tmpdir_path.iterdir():
+            shutil.rmtree(child)
+
+        subprocess.run(
+            ["git", "clone", _LLVM_GIT_URL, "."],
+            check=True,
+            cwd=tmpdir_path,
+        )
+
+        # This `rename` makes our lock on `tmpdir_path` non-global, which is
+        # less dangerous than it may seem, since it simultaneously brings
+        # `clone_target` into existence.
+        #
+        # Leveraging Linux's file locking guarantees, this means that
+        # `os.open`s of `tmpdir_path`s that are created after this is renamed
+        # _necessarily_ have a view of `tmpdir_path.parent` that includes
+        # `clone_target`.
+        os.rename(tmpdir_path, clone_target)
+    finally:
+        os.close(tmpdir_fd)
+
+
 def _GetToolchainUtilsCopyOfLLVMProject() -> Path:
     """Inits and returns ${toolchain_utils}/llvm_tools/llvm-project-copy.
 
@@ -154,8 +231,11 @@ def _GetToolchainUtilsCopyOfLLVMProject() -> Path:
         "This may take a while, but only has to be done once.",
         file=sys.stderr,
     )
-    llvm_project_copy.mkdir()
-    LLVMHash().CloneLLVMRepo(str(llvm_project_copy))
+    tmp_llvm_project_copy = llvm_project_copy.parent / ".llvm-project-copy"
+    _LockAndCloneLLVMProject(
+        clone_target=llvm_project_copy, tmpdir_path=tmp_llvm_project_copy
+    )
+    assert llvm_project_copy.is_dir(), llvm_project_copy
     return llvm_project_copy
 
 
