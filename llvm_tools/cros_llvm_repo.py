@@ -6,6 +6,7 @@
 
 from pathlib import Path
 import subprocess
+from typing import Optional
 
 
 # The path to the repository, relative to the root of a ChromeOS tree.
@@ -15,6 +16,14 @@ REPO_PATH = Path("src") / "third_party" / "llvm-project"
 UPSTREAM_REMOTE = "cros"
 # Git branch that contains upstream commits.
 UPSTREAM_MAIN = "upstream/main"
+
+
+def try_get_path() -> Optional[Path]:
+    """Returns the path to the CrOS LLVM Repository, if it exists."""
+    llvm_project = (
+        Path(__file__).resolve().parent.parent.parent / "llvm-project"
+    )
+    return llvm_project if llvm_project.is_dir() else None
 
 
 def fetch_upstream(repo_path: Path):

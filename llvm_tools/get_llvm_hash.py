@@ -20,6 +20,7 @@ from typing import Iterator, Optional, Tuple, Union
 
 from cros_utils import git_utils
 from llvm_tools import chroot
+from llvm_tools import cros_llvm_repo
 from llvm_tools import git_llvm_rev
 from llvm_tools import llvm_next
 from llvm_tools import manifest_utils
@@ -149,60 +150,27 @@ def GetLLVMMajorVersion(git_hash: Optional[str] = None) -> str:
     )
 
 
-def GetAndUpdateLLVMProjectInLLVMTools() -> str:
-    """Gets the absolute path to 'llvm-project-copy' directory in 'llvm_tools'.
-
-    The intent of this function is to avoid cloning the LLVM repo and then
-    discarding the contents of the repo. The function will create a directory
-    in '../toolchain-utils/llvm_tools' called 'llvm-project-copy' if this
-    directory does not exist yet. If it does not exist, then it will use the
-    LLVMHash() class to clone the LLVM repo into 'llvm-project-copy'.
-    Otherwise, it will clean the contents of that directory and then fetch from
-    the chromium LLVM mirror. In either case, this function will return the
-    absolute path to 'llvm-project-copy' directory.
+def _GetToolchainUtilsCopyOfLLVMProject() -> Path:
+    """Inits and returns ${toolchain_utils}/llvm_tools/llvm-project-copy.
 
     Returns:
-        Absolute path to 'llvm-project-copy' directory in 'llvm_tools'
-
-    Raises:
-        ValueError: LLVM repo (in 'llvm-project-copy' dir.) has changes or
-        failed to checkout to main or failed to fetch from chromium mirror of
-        LLVM.
+        The absolute path to the 'llvm-project-copy' directory in 'llvm_tools'
     """
+    # NOTE: At the moment, the initial sync of this is not thread-safe. It'd be
+    # nice to have a flock of some sort of toolchain-utils-local stamp for
+    # that.
+    llvm_project_copy = Path(__file__).resolve().parent / "llvm-project-copy"
+    if llvm_project_copy.is_dir():
+        return llvm_project_copy
 
-    abs_path_to_llvm_tools_dir = os.path.dirname(os.path.abspath(__file__))
-
-    abs_path_to_llvm_project_dir = os.path.join(
-        abs_path_to_llvm_tools_dir, "llvm-project-copy"
+    print(
+        f"llvm-project checkout requested; checking out {llvm_project_copy}.\n"
+        "This may take a while, but only has to be done once.",
+        file=sys.stderr,
     )
-
-    if not os.path.isdir(abs_path_to_llvm_project_dir):
-        print(
-            f"Checking out LLVM to {abs_path_to_llvm_project_dir}\n"
-            "so that we can map between commit hashes and revision numbers.\n"
-            "This may take a while, but only has to be done once.",
-            file=sys.stderr,
-        )
-        os.mkdir(abs_path_to_llvm_project_dir)
-
-        LLVMHash().CloneLLVMRepo(abs_path_to_llvm_project_dir)
-    else:
-        # `git status` has a '-s'/'--short' option that shortens the output.
-        # With the '-s' option, if no changes were made to the LLVM repo, then
-        # the output (assigned to 'repo_status') would be empty.
-        repo_status = subprocess_helpers.check_output(
-            ["git", "-C", abs_path_to_llvm_project_dir, "status", "-s"]
-        )
-
-        if repo_status.rstrip():
-            raise ValueError(
-                "LLVM repo in %s has changes, please remove."
-                % abs_path_to_llvm_project_dir
-            )
-
-        CheckoutBranch(abs_path_to_llvm_project_dir, git_llvm_rev.MAIN_BRANCH)
-
-    return abs_path_to_llvm_project_dir
+    llvm_project_copy.mkdir()
+    LLVMHash().CloneLLVMRepo(str(llvm_project_copy))
+    return llvm_project_copy
 
 
 @dataclasses.dataclass(frozen=True)
@@ -245,8 +213,14 @@ class ReadOnlyLLVMRepo:
 
 def GetReadOnlyLLVMRepo() -> ReadOnlyLLVMRepo:
     """Returns a read-only LLVM repository."""
+    if cros_llvm := cros_llvm_repo.try_get_path():
+        return ReadOnlyLLVMRepo(
+            path=cros_llvm,
+            remote=cros_llvm_repo.UPSTREAM_REMOTE,
+            upstream_main=cros_llvm_repo.UPSTREAM_MAIN,
+        )
     return ReadOnlyLLVMRepo(
-        path=Path(GetAndUpdateLLVMProjectInLLVMTools()),
+        path=_GetToolchainUtilsCopyOfLLVMProject(),
         remote="origin",
         upstream_main=git_llvm_rev.MAIN_BRANCH,
     )
