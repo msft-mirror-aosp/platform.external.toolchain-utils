@@ -1,12 +1,14 @@
-#!/usr/bin/env python3
 # Copyright 2024 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+
 """Tests for git_utils."""
 
+import subprocess
 import unittest
 
 from cros_utils import git_utils
+from llvm_tools import test_helpers
 
 
 # pylint: disable=protected-access
@@ -119,4 +121,41 @@ class Test(unittest.TestCase):
                 GERRIT_OUTPUT_WITH_INTERNAL_CL
             ),
             [7190037],
+        )
+
+
+class ShowFileAtRevTest(test_helpers.TempDirTestCase):
+    """Class for testing the show-file-at-rev functionality.
+
+    This is tested against git since it has heuristics matching against git
+    output in error cases.
+    """
+
+    def test_show_file_at_rev_works(self):
+        temp_dir = self.make_tempdir()
+        subprocess.run(
+            ["git", "init"],
+            check=True,
+            cwd=temp_dir,
+            stdin=subprocess.DEVNULL,
+        )
+        (temp_dir / "foo").write_text("old text")
+        git_utils.commit_all_changes(temp_dir, message="commit 1")
+        (temp_dir / "foo").write_text("new text")
+        git_utils.commit_all_changes(temp_dir, message="commit 2")
+
+        # Test multiple cases here to avoid setting up multiple git dirs on
+        # every invocation of this test. They're reasonably self-contained
+        # anyway.
+        self.assertEqual(
+            git_utils.maybe_show_file_at_commit(temp_dir, "HEAD", "foo"),
+            "new text",
+        )
+        self.assertEqual(
+            git_utils.maybe_show_file_at_commit(temp_dir, "HEAD~", "foo"),
+            "old text",
+        )
+
+        self.assertIsNone(
+            git_utils.maybe_show_file_at_commit(temp_dir, "HEAD", "bar")
         )

@@ -313,3 +313,41 @@ def discard_changes_and_checkout(git_dir: Path, ref: str):
         cwd=git_dir,
         stdin=subprocess.DEVNULL,
     )
+
+
+def maybe_show_file_at_commit(
+    git_dir: Path, ref: str, path_from_git_root: str
+) -> Optional[str]:
+    """Returns the given file's contents at `ref`.
+
+    Args:
+        git_dir: Directory to execute in.
+        ref: SHA or ref to get the file's contents from
+        path_from_git_root: The path from the git dir's root to get contents
+            for.
+
+    Returns:
+        File contents, or None if the file does not exist at the given ref.
+    """
+    result = subprocess.run(
+        ["git", "show", f"{ref}:{path_from_git_root}"],
+        check=False,
+        cwd=git_dir,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        encoding="utf-8",
+    )
+    if not result.returncode:
+        return result.stdout
+
+    # If this file does not exist, git will exit with code 128 and we'll get a
+    # stderr message like `fatal: path 'foo' does not exist in 'bar'`.
+    is_dne = (
+        result.returncode == 128 and "' does not exist in '" in result.stderr
+    )
+    if not is_dne:
+        # Put `check_returncode` in a branch before the return, since mypy
+        # can't determine that it always `raise`s.
+        result.check_returncode()
+    return None

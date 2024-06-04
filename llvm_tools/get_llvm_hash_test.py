@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # Copyright 2019 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -9,12 +8,12 @@ import contextlib
 from pathlib import Path
 import subprocess
 import textwrap
-import unittest
+from typing import Optional
 from unittest import mock
 
+from cros_utils import git_utils
 from llvm_tools import get_llvm_hash
 from llvm_tools import llvm_next
-from llvm_tools import subprocess_helpers
 from llvm_tools import test_helpers
 
 
@@ -133,70 +132,76 @@ class TestGetLLVMHash(test_helpers.TempDirTestCase):
             get_llvm_hash.ParseLLVMMajorVersion(invalid_cmakelist)
         )
 
-    @mock.patch.object(get_llvm_hash, "GetAndUpdateLLVMProjectInLLVMTools")
-    @mock.patch.object(subprocess_helpers, "CheckCommand")
+    @mock.patch.object(get_llvm_hash, "GetCachedUpToDateReadOnlyLLVMRepo")
+    @mock.patch.object(git_utils, "maybe_show_file_at_commit")
     def testGetLLVMMajorVersionWithOldPath(
         self,
-        _mock_check_command,
-        mock_update_project,
+        mock_show_file_at_commit,
+        mock_get_up_to_date_repo,
     ):
         src_dir = self.make_tempdir()
-        mock_update_project.return_value = str(src_dir)
+        mock_get_up_to_date_repo.return_value = get_llvm_hash.ReadOnlyLLVMRepo(
+            path=src_dir,
+            remote="origin",
+            upstream_main="main",
+        )
 
-        cmakelists = Path(src_dir) / "llvm" / "CMakeLists.txt"
-        cmakelists.parent.mkdir(parents=True)
-        cmakelists.write_text(
-            textwrap.dedent(
+        def show_file_at_commit(
+            repo: Path, ref: str, path: str
+        ) -> Optional[str]:
+            self.assertEqual(repo, src_dir)
+            self.assertEqual(ref, "HEAD")
+            self.assertEqual(path, "llvm/CMakeLists.txt")
+            return textwrap.dedent(
                 """
                 if(NOT DEFINED LLVM_VERSION_MAJOR)
                   set(LLVM_VERSION_MAJOR 12345)
                 endif()
                 """
-            ),
-            encoding="utf-8",
-        )
+            )
+
+        mock_show_file_at_commit.side_effect = show_file_at_commit
         self.assertEqual(get_llvm_hash.GetLLVMMajorVersion(), "12345")
 
-    @mock.patch.object(get_llvm_hash, "GetAndUpdateLLVMProjectInLLVMTools")
-    @mock.patch.object(subprocess_helpers, "CheckCommand")
+    @mock.patch.object(get_llvm_hash, "GetCachedUpToDateReadOnlyLLVMRepo")
+    @mock.patch.object(git_utils, "maybe_show_file_at_commit")
     def testGetLLVMMajorVersionWithNewPath(
         self,
-        _mock_check_command,
-        mock_update_project,
+        mock_show_file_at_commit,
+        mock_get_up_to_date_repo,
     ):
         src_dir = self.make_tempdir()
-        mock_update_project.return_value = str(src_dir)
-
-        old_cmakelists = Path(src_dir) / "llvm" / "CMakeLists.txt"
-        old_cmakelists.parent.mkdir(parents=True)
-        old_cmakelists.write_text(
-            textwrap.dedent(
-                """
-                Some text
-                that has
-                nothing to do with
-                LLVM_VERSION_MAJOR
-                """
-            ),
-            encoding="utf-8",
+        mock_get_up_to_date_repo.return_value = get_llvm_hash.ReadOnlyLLVMRepo(
+            path=src_dir,
+            remote="origin",
+            upstream_main="main",
         )
 
-        new_cmakelists = (
-            Path(src_dir) / "cmake" / "Modules" / "LLVMVersion.cmake"
-        )
-        new_cmakelists.parent.mkdir(parents=True)
-        new_cmakelists.write_text(
-            textwrap.dedent(
+        def show_file_at_commit(
+            repo: Path, ref: str, path: str
+        ) -> Optional[str]:
+            self.assertEqual(repo, src_dir)
+            self.assertEqual(ref, "HEAD")
+            if path == "llvm/CMakeLists.txt":
+                return textwrap.dedent(
+                    """
+                    Some text
+                    that has
+                    nothing to do with
+                    LLVM_VERSION_MAJOR
+                    """
+                )
+            self.assertEqual(path, "cmake/Modules/LLVMVersion.cmake")
+            return textwrap.dedent(
                 """
                 if(NOT DEFINED LLVM_VERSION_MAJOR)
-                  set(LLVM_VERSION_MAJOR 5432)
+                  set(LLVM_VERSION_MAJOR 12345)
                 endif()
                 """
-            ),
-            encoding="utf-8",
-        )
+            )
 
-        self.assertEqual(get_llvm_hash.GetLLVMMajorVersion(), "5432")
+        mock_show_file_at_commit.side_effect = show_file_at_commit
+        self.assertEqual(get_llvm_hash.GetLLVMMajorVersion(), "12345")
 
     def testGetLLVMNextHash(self):
         self.assertEqual(

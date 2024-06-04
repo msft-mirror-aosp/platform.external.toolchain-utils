@@ -18,6 +18,7 @@ import sys
 import tempfile
 from typing import Iterator, Optional, Tuple, Union
 
+from cros_utils import git_utils
 from llvm_tools import chroot
 from llvm_tools import git_llvm_rev
 from llvm_tools import llvm_next
@@ -123,34 +124,25 @@ def GetLLVMMajorVersion(git_hash: Optional[str] = None) -> str:
           there was a failure to checkout git_hash version
         FileExistsError: The src directory doe not contain CMakeList.txt
     """
-    src_dir = GetAndUpdateLLVMProjectInLLVMTools()
-
     # b/325895866#comment36: the LLVM version number was moved from
     # `llvm/CMakeLists.txt` to `cmake/Modules/LLVMVersion.cmake` in upstream
     # commit 81e20472a0c5a4a8edc5ec38dc345d580681af81 (r530225). Until we no
     # longer care about looking before that, we need to support searching both
     # files.
     cmakelists_paths = (
-        Path(src_dir) / "llvm" / "CMakeLists.txt",
-        Path(src_dir) / "cmake" / "Modules" / "LLVMVersion.cmake",
+        "llvm/CMakeLists.txt",
+        "cmake/Modules/LLVMVersion.cmake",
     )
 
-    with contextlib.ExitStack() as on_exit:
-        if git_hash:
-            subprocess_helpers.CheckCommand(
-                ["git", "-C", src_dir, "checkout", git_hash]
-            )
-            on_exit.callback(CheckoutBranch, src_dir, git_llvm_rev.MAIN_BRANCH)
-
-        for path in cmakelists_paths:
-            try:
-                file_contents = path.read_text(encoding="utf-8")
-            except FileNotFoundError:
-                # If this file DNE (yet), ignore it.
-                continue
-
-            if version := ParseLLVMMajorVersion(file_contents):
-                return version
+    repo = GetCachedUpToDateReadOnlyLLVMRepo()
+    ref = git_hash if git_hash else "HEAD"
+    for path in cmakelists_paths:
+        contents = git_utils.maybe_show_file_at_commit(repo.path, ref, path)
+        if contents is None:
+            # Ignore the file if it doesn't exist yet.
+            continue
+        if version := ParseLLVMMajorVersion(contents):
+            return version
 
     raise ValueError(
         f"Major version could not be parsed from any of {cmakelists_paths}"
