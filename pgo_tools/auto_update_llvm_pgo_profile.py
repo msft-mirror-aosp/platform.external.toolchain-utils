@@ -298,10 +298,14 @@ def create_llvm_pgo_ebuild_update(
     profile_cache: GsProfileCache,
     dry_run: bool,
 ) -> Optional[str]:
-    llvm_dir = get_llvm_hash.GetAndUpdateLLVMProjectInLLVMTools()
-    llvm_hash = get_llvm_hash.LLVMHash()
-    current_llvm_sha = llvm_hash.GetCrOSCurrentLLVMHash(chromeos_root)
-    current_llvm_rev = get_llvm_hash.GetVersionFrom(llvm_dir, current_llvm_sha)
+    current_llvm_sha = get_llvm_hash.LLVMHash().GetCrOSCurrentLLVMHash(
+        chromeos_root
+    )
+    current_llvm_rev = (
+        get_llvm_hash.GetCachedUpToDateReadOnlyLLVMRepo().GetRevisionFromHash(
+            current_llvm_sha
+        )
+    )
     logging.info("Current LLVM revision is %d", current_llvm_rev)
     want_revisions = [current_llvm_rev]
 

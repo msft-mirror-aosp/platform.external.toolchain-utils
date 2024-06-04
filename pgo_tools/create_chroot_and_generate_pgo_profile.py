@@ -234,15 +234,12 @@ def main(argv: List[str]):
 
     rev = opts.rev
 
-    # This translation can take a few seconds, so give a helpful log. If
-    # anything needs to be fetched, `get_llvm_hash` will also print a "this may
-    # take a while"-style message.
-    logging.info("Translating r%d to a git SHA", rev)
-    sha = get_llvm_hash.GetGitHashFrom(
-        get_llvm_hash.GetAndUpdateLLVMProjectInLLVMTools(),
-        rev,
+    # Note that `GetUpToDateReadOnlyLLVMRepo` prints helpful messages when it
+    # goes to the network, so logging that this is happening here is redundant.
+    sha = get_llvm_hash.GetCachedUpToDateReadOnlyLLVMRepo().GetHashFromRevision(
+        rev
     )
-    logging.info("r%d == %s", rev, sha)
+    logging.info("Translated r%d == %s", rev, sha)
 
     if opts.chromiumos_tree:
         repo_root = chroot.FindChromeOSRootAbove(opts.chromiumos_tree)

@@ -6,7 +6,9 @@
 
 import argparse
 import contextlib
+import dataclasses
 import functools
+import logging
 import os
 from pathlib import Path
 import re
@@ -211,6 +213,73 @@ def GetAndUpdateLLVMProjectInLLVMTools() -> str:
     return abs_path_to_llvm_project_dir
 
 
+@dataclasses.dataclass(frozen=True)
+class ReadOnlyLLVMRepo:
+    """Describes an LLVM repository, and provides some useful ops on it.
+
+    Strictly speaking, `read-only` is a bit of a misnomer: the git data of this
+    repo may be updated by users of this class. The expectation is that the
+    working tree won't be modified, though.
+    """
+
+    # Path to the repository.
+    path: Path
+    # The name of the remote to query.
+    remote: str
+    # The ref that points to the upstream's main branch.
+    upstream_main: str
+
+    def GetRevisionFromHash(self, git_hash: str) -> int:
+        """Converts a SHA to an svn-like revision."""
+        version = git_llvm_rev.translate_sha_to_rev(
+            git_llvm_rev.LLVMConfig(remote=self.remote, dir=self.path), git_hash
+        )
+        # Note: branches aren't supported. Always match against
+        # `git_llvm_rev.MAIN_BRANCH` instead of `upstream_main`, since
+        # `git_llvm_rev` doesn't acknowledge `upstream_main`.
+        assert version.branch == git_llvm_rev.MAIN_BRANCH, (
+            "Revisions only make sense on main, but given git hash was "
+            f"on {version.branch}"
+        )
+        return version.number
+
+    def GetHashFromRevision(self, revision: int) -> str:
+        """Converts a svn-like revision to a SHA on main."""
+        return git_llvm_rev.translate_rev_to_sha(
+            git_llvm_rev.LLVMConfig(remote=self.remote, dir=self.path),
+            git_llvm_rev.Rev(branch=self.upstream_main, number=revision),
+        )
+
+
+def GetReadOnlyLLVMRepo() -> ReadOnlyLLVMRepo:
+    """Returns a read-only LLVM repository."""
+    return ReadOnlyLLVMRepo(
+        path=Path(GetAndUpdateLLVMProjectInLLVMTools()),
+        remote="origin",
+        upstream_main=git_llvm_rev.MAIN_BRANCH,
+    )
+
+
+def GetUpToDateReadOnlyLLVMRepo() -> ReadOnlyLLVMRepo:
+    """GetReadOnlyLLVMRepo, with an added `git fetch` step."""
+    repo = GetReadOnlyLLVMRepo()
+    logging.info("Updating LLVM repository at %s...", repo.path)
+    subprocess.run(
+        ["git", "fetch", "--quiet", repo.remote, repo.upstream_main],
+        check=True,
+        cwd=repo.path,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+    )
+    return repo
+
+
+@functools.lru_cache(1)
+def GetCachedUpToDateReadOnlyLLVMRepo() -> ReadOnlyLLVMRepo:
+    """GetUpToDateReadOnlyLLVMRepo, but will cache the result."""
+    return GetUpToDateReadOnlyLLVMRepo()
+
+
 def GetGoogle3LLVMVersion(stable: bool) -> int:
     """Gets the latest google3 LLVM version.
 
@@ -224,10 +293,7 @@ def GetGoogle3LLVMVersion(stable: bool) -> int:
         subprocess.CalledProcessError: An invalid path has been provided to the
         `cat` command.
     """
-
     subdir = "stable" if stable else "llvm_unstable"
-
-    # Cmd to get latest google3 LLVM version.
     cmd = [
         "cat",
         os.path.join(
@@ -236,14 +302,8 @@ def GetGoogle3LLVMVersion(stable: bool) -> int:
             "installs/llvm/git_origin_rev_id",
         ),
     ]
-
-    # Get latest version.
-    git_hash = subprocess_helpers.check_output(cmd)
-
-    # Change type to an integer
-    return GetVersionFrom(
-        GetAndUpdateLLVMProjectInLLVMTools(), git_hash.rstrip()
-    )
+    git_hash = subprocess_helpers.check_output(cmd).rstrip()
+    return GetCachedUpToDateReadOnlyLLVMRepo().GetRevisionFromHash(git_hash)
 
 
 def IsSvnOption(svn_option: str) -> Union[int, str]:
@@ -293,19 +353,18 @@ def GetLLVMHashAndVersionFromSVNOption(
     """
 
     new_llvm_hash = LLVMHash()
-
+    llvm_repo = GetCachedUpToDateReadOnlyLLVMRepo()
     # Determine which LLVM git hash to retrieve.
     if svn_option == "tot":
         git_hash = new_llvm_hash.GetTopOfTrunkGitHash()
-        version = GetVersionFrom(GetAndUpdateLLVMProjectInLLVMTools(), git_hash)
+        version = llvm_repo.GetRevisionFromHash(git_hash)
     elif isinstance(svn_option, int):
         version = svn_option
-        git_hash = GetGitHashFrom(GetAndUpdateLLVMProjectInLLVMTools(), version)
+        git_hash = llvm_repo.GetHashFromRevision(version)
     else:
         assert svn_option in ("google3", "google3-unstable")
         version = GetGoogle3LLVMVersion(stable=svn_option == "google3")
-
-        git_hash = GetGitHashFrom(GetAndUpdateLLVMProjectInLLVMTools(), version)
+        git_hash = llvm_repo.GetHashFromRevision(version)
 
     return git_hash, version
 
@@ -369,10 +428,7 @@ class LLVMHash:
         Returns:
             The hash as a string that corresponds to the LLVM version.
         """
-        hash_value = GetGitHashFrom(
-            GetAndUpdateLLVMProjectInLLVMTools(), version
-        )
-        return hash_value
+        return GetCachedUpToDateReadOnlyLLVMRepo().GetHashFromRevision(version)
 
     def GetCrOSCurrentLLVMHash(self, chromeos_tree: Path) -> str:
         """Retrieves the current ChromeOS LLVM hash."""

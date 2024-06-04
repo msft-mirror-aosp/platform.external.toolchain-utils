@@ -16,7 +16,6 @@ import json
 import logging
 from pathlib import Path
 import subprocess
-import sys
 import textwrap
 from typing import List, Optional
 
@@ -42,7 +41,7 @@ def resolve_llvm_sha(sha_or_special: str) -> str:
     if git_utils.is_full_git_sha(sha_or_special):
         return sha_or_special
     return git_utils.resolve_ref(
-        Path(get_llvm_hash.GetAndUpdateLLVMProjectInLLVMTools()), sha_or_special
+        get_llvm_hash.GetCachedUpToDateReadOnlyLLVMRepo().path, sha_or_special
     )
 
 
@@ -376,8 +375,10 @@ def main(argv: List[str]) -> None:
         )
 
     logging.info("Getting LLVM revision for SHA %s...", new_sha)
-    new_rev = get_llvm_hash.GetVersionFrom(
-        get_llvm_hash.GetAndUpdateLLVMProjectInLLVMTools(), new_sha
+    new_rev = (
+        get_llvm_hash.GetCachedUpToDateReadOnlyLLVMRepo().GetRevisionFromHash(
+            new_sha
+        )
     )
     logging.info("LLVM SHA %s == r%d", new_sha, new_rev)
     uploaded_cls = create_and_upload_cls(
