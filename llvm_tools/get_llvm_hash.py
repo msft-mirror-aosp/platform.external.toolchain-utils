@@ -79,20 +79,6 @@ def GetGitHashFrom(src_dir: Union[Path, str], version: int) -> str:
     )
 
 
-def CheckoutBranch(src_dir: Union[Path, str], branch: str) -> None:
-    """Checks out and pulls from a branch in a git repo.
-
-    Args:
-        src_dir: The LLVM source tree.
-        branch: The git branch to checkout in src_dir.
-
-    Raises:
-        ValueError: Failed to checkout or pull branch version
-    """
-    subprocess_helpers.CheckCommand(["git", "-C", src_dir, "checkout", branch])
-    subprocess_helpers.CheckCommand(["git", "-C", src_dir, "pull"])
-
-
 def ParseLLVMMajorVersion(cmakelist: str) -> Optional[str]:
     """Reads CMakeList.txt file contents for LLVMMajor Version.
 

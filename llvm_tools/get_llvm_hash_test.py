@@ -4,7 +4,6 @@
 
 """Unit tests for retrieving the LLVM hash."""
 
-import contextlib
 from pathlib import Path
 import subprocess
 import textwrap
@@ -99,21 +98,6 @@ class TestGetLLVMHash(test_helpers.TempDirTestCase):
             get_llvm_hash.LLVMHash().GetTopOfTrunkGitHash(), "a123testhash1"
         )
         mock_check_output.assert_called_once()
-
-    @mock.patch.object(subprocess, "Popen")
-    def testCheckoutBranch(self, mock_popen):
-        mock_popen.return_value = contextlib.nullcontext(
-            mock.MagicMock(communicate=lambda: (None, None), returncode=0)
-        )
-        get_llvm_hash.CheckoutBranch("fake/src_dir", "fake_branch")
-        self.assertEqual(
-            mock_popen.call_args_list[0][0],
-            (["git", "-C", "fake/src_dir", "checkout", "fake_branch"],),
-        )
-        self.assertEqual(
-            mock_popen.call_args_list[1][0],
-            (["git", "-C", "fake/src_dir", "pull"],),
-        )
 
     def testParseLLVMMajorVersion(self):
         cmakelist_42 = (
