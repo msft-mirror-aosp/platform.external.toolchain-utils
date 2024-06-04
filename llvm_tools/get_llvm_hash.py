@@ -408,6 +408,12 @@ def main() -> None:
     """
     my_dir = Path(__file__).parent.resolve()
 
+    logging.basicConfig(
+        format=">> %(asctime)s: %(levelname)s: %(filename)s:%(lineno)d: "
+        "%(message)s",
+        level=logging.INFO,
+    )
+
     # Create parser and add optional command-line arguments.
     parser = argparse.ArgumentParser(description="Finds the LLVM hash.")
     parser.add_argument(
@@ -420,7 +426,6 @@ def main() -> None:
     parser.add_argument(
         "--chromeos_tree",
         type=Path,
-        required=True,
         help="""
         Path to a ChromeOS tree. If not passed, one will be inferred. If none
         can be inferred, this script will fail.
