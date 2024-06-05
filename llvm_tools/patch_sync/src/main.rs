@@ -42,6 +42,7 @@ fn main() -> Result<()> {
             no_commit,
             wip,
             disable_cq,
+            uprev,
         } => transpose_subcmd(TransposeOpt {
             cros_checkout_path,
             cros_reviewers: cros_reviewers
@@ -59,6 +60,7 @@ fn main() -> Result<()> {
             no_commit,
             wip,
             disable_cq,
+            uprev_ebuilds: uprev,
         }),
     }
 }
@@ -83,6 +85,7 @@ fn show_subcmd(args: ShowOpt) -> Result<()> {
         sync_before: sync,
         wip_mode: true,   // Has no effect, as we're not making changes
         enable_cq: false, // Has no effect, as we're not uploading anything
+        uprev_ebuilds: false,
     };
     ctx.setup()?;
     let make_collection = |platform: &str, patches_fp: &Path| -> Result<PatchCollection> {
@@ -122,6 +125,7 @@ struct TransposeOpt {
     android_reviewers: Vec<String>,
     wip: bool,
     disable_cq: bool,
+    uprev_ebuilds: bool,
 }
 
 fn transpose_subcmd(args: TransposeOpt) -> Result<()> {
@@ -131,6 +135,7 @@ fn transpose_subcmd(args: TransposeOpt) -> Result<()> {
         sync_before: args.sync,
         wip_mode: args.wip,
         enable_cq: !args.disable_cq,
+        uprev_ebuilds: args.uprev_ebuilds,
     };
     ctx.setup()?;
     let cros_patches_path = ctx.cros_patches_path();
@@ -175,14 +180,16 @@ fn transpose_subcmd(args: TransposeOpt) -> Result<()> {
             )
         })?
     };
-    let new_android_patches = new_android_patches.filter_patches(|p| {
-        match (p.get_from_version(), p.get_until_version()) {
+    if args.verbose {
+        println!("Android LLVM version: r{}", android_llvm_version);
+    }
+    let new_cros_patches =
+        new_cros_patches.filter_patches(|p| match (p.get_from_version(), p.get_until_version()) {
             (Some(start), Some(end)) => start <= android_llvm_version && android_llvm_version < end,
             (Some(start), None) => start <= android_llvm_version,
             (None, Some(end)) => android_llvm_version < end,
             (None, None) => true,
-        }
-    });
+        });
 
     // Need to filter version updates to only existing patches to the other platform.
     let cros_version_updates =
@@ -365,6 +372,10 @@ enum Opt {
         /// Run repo sync before transposing.
         #[structopt(short, long)]
         sync: bool,
+
+        /// Revbump/uprev ebuilds during transposing.
+        #[structopt(long)]
+        uprev: bool,
 
         /// Print information to stdout
         #[structopt(short, long)]

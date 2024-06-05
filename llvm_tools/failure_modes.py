@@ -1,10 +1,8 @@
-# -*- coding: utf-8 -*-
 # Copyright 2019 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
 """Failure mode constants avaiable to the patch manager."""
-
 
 import enum
 
@@ -16,7 +14,6 @@ class FailureModes(enum.Enum):
     CONTINUE = "continue"
     DISABLE_PATCHES = "disable_patches"
     BISECT_PATCHES = "bisect_patches"
-    REMOVE_PATCHES = "remove_patches"
 
     # Only used by 'bisect_patches'.
     INTERNAL_BISECTION = "internal_bisection"

@@ -119,7 +119,7 @@ func TestRealConfigWithConfigNameFlag(t *testing.T) {
 
 func isSysrootHardened(cfg *config) bool {
 	for _, arg := range cfg.commonFlags {
-		if arg == "-D_FORTIFY_SOURCE=2" {
+		if arg == "-D_FORTIFY_SOURCE=3" {
 			return true
 		}
 	}

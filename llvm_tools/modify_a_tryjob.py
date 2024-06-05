@@ -1,21 +1,22 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # Copyright 2019 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
 """Modifies a tryjob based off of arguments."""
 
-
 import argparse
 import enum
 import json
 import os
+from pathlib import Path
 import sys
+from typing import Dict, Iterable, List, Union
 
 import chroot
 import failure_modes
 import get_llvm_hash
+import git
 import update_chromeos_llvm_hash
 import update_packages_and_run_tests
 import update_tryjob_status
@@ -29,7 +30,7 @@ class ModifyTryjob(enum.Enum):
     ADD = "add"
 
 
-def GetCommandLineArgs():
+def GetCommandLineArgs() -> argparse.Namespace:
     """Parses the command line for the command line arguments."""
 
     # Default path to the chroot if a path is not specified.
@@ -45,11 +46,12 @@ def GetCommandLineArgs():
     parser.add_argument(
         "--status_file",
         required=True,
-        help="The absolute path to the JSON file that contains the tryjobs used "
-        "for bisecting LLVM.",
+        help="The absolute path to the JSON file that contains the tryjobs "
+        "used for bisecting LLVM.",
     )
 
-    # Add argument that determines what action to take on the revision specified.
+    # Add argument that determines what action to take on the revision
+    # specified.
     parser.add_argument(
         "--modify_tryjob",
         required=True,
@@ -66,7 +68,8 @@ def GetCommandLineArgs():
         help="The revision to either remove or relaunch.",
     )
 
-    # Add argument for other change lists that want to run alongside the tryjob.
+    # Add argument for other change lists that want to run alongside the
+    # tryjob.
     parser.add_argument(
         "--extra_change_lists",
         type=int,
@@ -90,17 +93,9 @@ def GetCommandLineArgs():
 
     # Add argument for a specific chroot path.
     parser.add_argument(
-        "--chroot_path",
+        "--chromeos_path",
         default=cros_root,
         help="the path to the chroot (default: %(default)s)",
-    )
-
-    # Add argument for whether to display command contents to `stdout`.
-    parser.add_argument(
-        "--verbose",
-        action="store_true",
-        help="display contents of a command to the terminal "
-        "(default: %(default)s)",
     )
 
     args_output = parser.parse_args()
@@ -130,13 +125,12 @@ def GetCommandLineArgs():
 
 
 def GetCLAfterUpdatingPackages(
-    packages,
-    git_hash,
-    svn_version,
-    chroot_path,
-    patch_metadata_file,
-    svn_option,
-):
+    packages: Iterable[str],
+    git_hash: str,
+    svn_version: int,
+    chromeos_path: Union[Path, str],
+    svn_option: Union[int, str],
+) -> git.CommitContents:
     """Updates the packages' LLVM_NEXT."""
 
     change_list = update_chromeos_llvm_hash.UpdatePackages(
@@ -145,12 +139,15 @@ def GetCLAfterUpdatingPackages(
         llvm_variant=update_chromeos_llvm_hash.LLVMVariant.next,
         git_hash=git_hash,
         svn_version=svn_version,
-        chroot_path=chroot_path,
+        chroot_opts=update_chromeos_llvm_hash.ChrootOpts(Path(chromeos_path)),
         mode=failure_modes.FailureModes.DISABLE_PATCHES,
         git_hash_source=svn_option,
-        extra_commit_msg=None,
+        extra_commit_msg_lines=None,
     )
 
+    # We are calling UpdatePackages with upload_changes=True, in
+    # which case it should always return a git.CommitContents value.
+    assert change_list is not None
     print("\nSuccessfully updated packages to %d" % svn_version)
     print("Gerrit URL: %s" % change_list.url)
     print("Change list number: %d" % change_list.cl_number)
@@ -159,8 +156,14 @@ def GetCLAfterUpdatingPackages(
 
 
 def CreateNewTryjobEntryForBisection(
-    cl, extra_cls, options, builder, chroot_path, cl_url, revision
-):
+    cl: int,
+    extra_cls: List[int],
+    options: List[str],
+    builder: str,
+    chromeos_path: Union[Path, str],
+    cl_url: str,
+    revision,
+) -> Dict:
     """Submits a tryjob and adds additional information."""
 
     # Get the tryjob results after submitting the tryjob.
@@ -175,7 +178,7 @@ def CreateNewTryjobEntryForBisection(
     #   }
     # ]
     tryjob_results = update_packages_and_run_tests.RunTryJobs(
-        cl, extra_cls, options, [builder], chroot_path
+        cl, extra_cls, options, [builder], chromeos_path
     )
     print("\nTryjob:")
     print(tryjob_results[0])
@@ -192,27 +195,22 @@ def CreateNewTryjobEntryForBisection(
 
 
 def AddTryjob(
-    packages,
-    git_hash,
-    revision,
-    chroot_path,
-    patch_metadata_file,
-    extra_cls,
-    options,
-    builder,
-    verbose,
-    svn_option,
+    packages: Iterable[str],
+    git_hash: str,
+    revision: int,
+    chromeos_path: Union[Path, str],
+    extra_cls: List[int],
+    options: List[str],
+    builder: str,
+    svn_option: Union[int, str],
 ):
     """Submits a tryjob."""
-
-    update_chromeos_llvm_hash.verbose = verbose
 
     change_list = GetCLAfterUpdatingPackages(
         packages,
         git_hash,
         revision,
-        chroot_path,
-        patch_metadata_file,
+        chromeos_path,
         svn_option,
     )
 
@@ -221,7 +219,7 @@ def AddTryjob(
         extra_cls,
         options,
         builder,
-        chroot_path,
+        chromeos_path,
         change_list.url,
         revision,
     )
@@ -230,28 +228,25 @@ def AddTryjob(
 
 
 def PerformTryjobModification(
-    revision,
-    modify_tryjob,
-    status_file,
-    extra_cls,
-    options,
-    builder,
-    chroot_path,
-    verbose,
-):
+    revision: int,
+    modify_tryjob: ModifyTryjob,
+    status_file: Union[Path, str],
+    extra_cls: List[int],
+    options: List[str],
+    builder: str,
+    chromeos_path: Union[Path, str],
+) -> None:
     """Removes, relaunches, or adds a tryjob.
 
     Args:
-      revision: The revision associated with the tryjob.
-      modify_tryjob: What action to take on the tryjob.
-        Ex: ModifyTryjob.REMOVE, ModifyTryjob.RELAUNCH, ModifyTryjob.ADD
-      status_file: The .JSON file that contains the tryjobs.
-      extra_cls: Extra change lists to be run alongside tryjob
-      options: Extra options to pass into 'cros tryjob'.
-      builder: The builder to use for 'cros tryjob'.
-      chroot_path: The absolute path to the chroot (used by 'cros tryjob' when
-      relaunching a tryjob).
-      verbose: Determines whether to print the contents of a command to `stdout`.
+        revision: The revision associated with the tryjob.
+        modify_tryjob: What action to take on the tryjob.
+          Ex: ModifyTryjob.REMOVE, ModifyTryjob.RELAUNCH, ModifyTryjob.ADD
+        status_file: The .JSON file that contains the tryjobs.
+        extra_cls: Extra change lists to be run alongside tryjob
+        options: Extra options to pass into 'cros tryjob'.
+        builder: The builder to use for 'cros tryjob'.
+        chromeos_path: The absolute path to the chromeos checkout.
     """
 
     # Format of 'bisect_contents':
@@ -265,7 +260,7 @@ def PerformTryjobModification(
     #       {[TRYJOB_INFORMATION]}
     #   ]
     # }
-    with open(status_file) as tryjobs:
+    with open(status_file, encoding="utf-8") as tryjobs:
         bisect_contents = json.load(tryjobs)
 
     if not bisect_contents["jobs"] and modify_tryjob != ModifyTryjob.ADD:
@@ -293,7 +288,7 @@ def PerformTryjobModification(
             bisect_contents["jobs"][tryjob_index]["extra_cls"],
             bisect_contents["jobs"][tryjob_index]["options"],
             bisect_contents["jobs"][tryjob_index]["builder"],
-            chroot_path,
+            chromeos_path,
         )
 
         bisect_contents["jobs"][tryjob_index][
@@ -318,12 +313,9 @@ def PerformTryjobModification(
                 % (tryjob_index, status_file)
             )
 
-        # Make sure the revision is within the bounds of the start and end of the
-        # bisection.
+        # Make sure the revision is within the bounds of the start and end of
+        # the bisection.
         elif bisect_contents["start"] < revision < bisect_contents["end"]:
-
-            patch_metadata_file = "PATCHES.json"
-
             (
                 git_hash,
                 revision,
@@ -333,12 +325,10 @@ def PerformTryjobModification(
                 update_chromeos_llvm_hash.DEFAULT_PACKAGES,
                 git_hash,
                 revision,
-                chroot_path,
-                patch_metadata_file,
+                chromeos_path,
                 extra_cls,
                 options,
                 builder,
-                verbose,
                 revision,
             )
 
@@ -352,18 +342,20 @@ def PerformTryjobModification(
             'Invalid "modify_tryjob" option provided: %s' % modify_tryjob
         )
 
-    with open(status_file, "w") as update_tryjobs:
+    with open(status_file, "w", encoding="utf-8") as update_tryjobs:
         json.dump(
             bisect_contents, update_tryjobs, indent=4, separators=(",", ": ")
         )
 
 
-def main():
+def main() -> None:
     """Removes, relaunches, or adds a tryjob."""
 
     chroot.VerifyOutsideChroot()
 
     args_output = GetCommandLineArgs()
+
+    chroot.VerifyChromeOSRoot(args_output.chromeos_path)
 
     PerformTryjobModification(
         args_output.revision,
@@ -372,8 +364,7 @@ def main():
         args_output.extra_change_lists,
         args_output.options,
         args_output.builder,
-        args_output.chroot_path,
-        args_output.verbose,
+        args_output.chromeos_path,
     )
 
 

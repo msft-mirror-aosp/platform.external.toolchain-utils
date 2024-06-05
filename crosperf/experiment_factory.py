@@ -28,33 +28,8 @@ import config
 # specified sets.  Here we define sets of tests that users may want
 # to run together.
 
-telemetry_perfv2_tests = [
-    "kraken",
-    "octane",
-]
-
-telemetry_pagecycler_tests = [
-    "page_cycler_v2.intl_ar_fa_he",
-    "page_cycler_v2.intl_es_fr_pt-BR",
-    "page_cycler_v2.intl_hi_ru",
-    "page_cycler_v2.intl_ja_zh",
-    "page_cycler_v2.intl_ko_th_vi",
-    "page_cycler_v2.typical_25",
-]
-
-telemetry_toolchain_old_perf_tests = [
-    "page_cycler_v2.intl_es_fr_pt-BR",
-    "page_cycler_v2.intl_hi_ru",
-    "page_cycler_v2.intl_ja_zh",
-    "page_cycler_v2.intl_ko_th_vi",
-    "page_cycler_v2.netsim.top_10",
-    "page_cycler_v2.typical_25",
-    "spaceport",
-    "tab_switching.top_10",
-]
 telemetry_toolchain_perf_tests = [
     "octane",
-    "kraken",
     "speedometer",
     "speedometer2",
     "jetstream2",
@@ -68,13 +43,10 @@ graphics_perf_tests = [
 ]
 # TODO: disable rendering.desktop by default as the benchmark is
 # currently in a bad state
-# page_cycler_v2.typical_25 is deprecated and the recommend replacement is
-# loading.desktop@@typical (crbug.com/916340)
 telemetry_crosbolt_perf_tests = [
     "octane",
-    "kraken",
     "speedometer2",
-    "jetstream",
+    "jetstream2",
     "loading.desktop",
     # 'rendering.desktop',
 ]
@@ -83,12 +55,6 @@ crosbolt_perf_tests = [
     "graphics_WebGLAquarium",
     "tast.video.PlaybackPerfVP91080P30FPS",
 ]
-
-#    'cheets_AntutuTest',
-#    'cheets_PerfBootServer',
-#    'cheets_CandyCrushTest',
-#    'cheets_LinpackTest',
-# ]
 
 dso_list = [
     "all",
@@ -211,6 +177,7 @@ class ExperimentFactory(object):
             "turbostat": global_settings.GetField("turbostat"),
             "top_interval": global_settings.GetField("top_interval"),
         }
+        keep_stateful = global_settings.GetField("keep_stateful")
 
         # Default cache hit conditions. The image checksum in the cache and the
         # computed checksum of the image must match. Also a cache file must exist.
@@ -220,7 +187,9 @@ class ExperimentFactory(object):
         ]
         if global_settings.GetField("rerun_if_failed"):
             cache_conditions.append(CacheConditions.RUN_SUCCEEDED)
-        if global_settings.GetField("rerun"):
+        if global_settings.GetField("rerun") or global_settings.GetField(
+            "ignore_cache"
+        ):
             cache_conditions.append(CacheConditions.FALSE)
         if global_settings.GetField("same_machine"):
             cache_conditions.append(CacheConditions.SAME_MACHINE_MATCH)
@@ -305,37 +274,7 @@ class ExperimentFactory(object):
                 )
 
             if suite == "telemetry_Crosperf":
-                if test_name == "all_perfv2":
-                    self.AppendBenchmarkSet(
-                        benchmarks,
-                        telemetry_perfv2_tests,
-                        test_args,
-                        iterations,
-                        rm_chroot_tmp,
-                        perf_args,
-                        suite,
-                        show_all_results,
-                        retries,
-                        run_local,
-                        cwp_dso,
-                        weight,
-                    )
-                elif test_name == "all_pagecyclers":
-                    self.AppendBenchmarkSet(
-                        benchmarks,
-                        telemetry_pagecycler_tests,
-                        test_args,
-                        iterations,
-                        rm_chroot_tmp,
-                        perf_args,
-                        suite,
-                        show_all_results,
-                        retries,
-                        run_local,
-                        cwp_dso,
-                        weight,
-                    )
-                elif test_name == "all_crosbolt_perf":
+                if test_name == "all_crosbolt_perf":
                     self.AppendBenchmarkSet(
                         benchmarks,
                         telemetry_crosbolt_perf_tests,
@@ -381,21 +320,6 @@ class ExperimentFactory(object):
                     )
                     # Add non-telemetry toolchain-perf benchmarks:
 
-                    # Tast test platform.ReportDiskUsage for image size.
-                    benchmarks.append(
-                        Benchmark(
-                            "platform.ReportDiskUsage",
-                            "platform.ReportDiskUsage",
-                            "",
-                            1,  # This is not a performance benchmark, only run once.
-                            rm_chroot_tmp,
-                            "",
-                            "tast",  # Specify the suite to be 'tast'
-                            show_all_results,
-                            retries,
-                        )
-                    )
-
                     # TODO: crbug.com/1057755 Do not enable graphics_WebGLAquarium until
                     # it gets fixed.
                     #
@@ -413,21 +337,6 @@ class ExperimentFactory(object):
                     #         run_local=False,
                     #         cwp_dso=cwp_dso,
                     #         weight=weight))
-                elif test_name == "all_toolchain_perf_old":
-                    self.AppendBenchmarkSet(
-                        benchmarks,
-                        telemetry_toolchain_old_perf_tests,
-                        test_args,
-                        iterations,
-                        rm_chroot_tmp,
-                        perf_args,
-                        suite,
-                        show_all_results,
-                        retries,
-                        run_local,
-                        cwp_dso,
-                        weight,
-                    )
                 else:
                     benchmark = Benchmark(
                         benchmark_name,
@@ -613,6 +522,7 @@ class ExperimentFactory(object):
             ignore_min_max,
             crosfleet,
             dut_config,
+            keep_stateful,
             no_lock=no_lock,
         )
 
@@ -623,7 +533,7 @@ class ExperimentFactory(object):
             os.path.dirname(__file__), "default_remotes"
         )
         try:
-            with open(default_remotes_file) as f:
+            with open(default_remotes_file, encoding="utf-8") as f:
                 for line in f:
                     key, v = line.split(":")
                     if key.strip() == board:
@@ -632,15 +542,15 @@ class ExperimentFactory(object):
                             return remotes
                         else:
                             raise RuntimeError(
-                                "There is no remote for {0}".format(board)
+                                f"There is no remote for {board}"
                             )
         except IOError:
             # TODO: rethrow instead of throwing different exception.
             raise RuntimeError(
-                "IOError while reading file {0}".format(default_remotes_file)
+                f"IOError while reading file {default_remotes_file}"
             )
         else:
-            raise RuntimeError("There is no remote for {0}".format(board))
+            raise RuntimeError(f"There is no remote for {board}")
 
     def CheckRemotesInCrosfleet(self, remote):
         # TODO: (AI:zhizhouy) need to check whether a remote is a local or lab

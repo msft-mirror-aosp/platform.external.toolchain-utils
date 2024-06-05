@@ -41,13 +41,13 @@ func processClangFlags(builder *commandBuilder) error {
 		clangBasename = "clang++"
 	}
 
-	// GCC flags to remove from the clang command line.
-	// TODO: Once clang supports GCC compatibility mode, remove
-	// these checks.
-	//
+	// Unsupported flags to remove from the clang command line.
 	// Use of -Qunused-arguments allows this set to be small, just those
 	// that clang still warns about.
-	unsupported := make(map[string]bool)
+	unsupported := map[string]bool{
+		"-Xcompiler":     true,
+		"-avoid-version": true,
+	}
 
 	unsupportedPrefixes := []string{"-Wstrict-aliasing=", "-finline-limit="}
 

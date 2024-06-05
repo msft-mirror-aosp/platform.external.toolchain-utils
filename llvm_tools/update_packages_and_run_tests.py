@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # Copyright 2019 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
 """Runs a tryjob/tryjobs after updating the packages."""
 
-
 import argparse
 import datetime
 import json
 import os
+from pathlib import Path
 import subprocess
+from typing import Any, Dict, Iterable, List, Optional, Union
 
 import chroot
 import failure_modes
@@ -19,17 +19,17 @@ import get_llvm_hash
 import update_chromeos_llvm_hash
 
 
-VALID_CQ_TRYBOTS = ["llvm", "llvm-next", "llvm-tot"]
+VALID_CQ_TRYBOTS = ("llvm", "llvm-next")
 
 
-def GetCommandLineArgs():
+def GetCommandLineArgs() -> argparse.Namespace:
     """Parses the command line for the command line arguments.
 
     Returns:
-      The log level to use when retrieving the LLVM hash or google3 LLVM version,
-      the chroot path to use for executing chroot commands,
-      a list of a package or packages to update their LLVM next hash,
-      and the LLVM version to use when retrieving the LLVM hash.
+        The log level to use when retrieving the LLVM hash or google3 LLVM
+        version, the chroot path to use for executing chroot commands,
+        a list of a package or packages to update their LLVM next hash,
+        and the LLVM version to use when retrieving the LLVM hash.
     """
 
     # Default path to the chroot if a path is not specified.
@@ -54,9 +54,28 @@ def GetCommandLineArgs():
 
     # Add argument for a specific chroot path.
     parser.add_argument(
-        "--chroot_path",
+        "--chromeos_path",
         default=cros_root,
-        help="the path to the chroot (default: %(default)s)",
+        help="the path to the ChromeOS tree (default: %(default)s)",
+    )
+
+    # Add argument for a specific chroot path.
+    parser.add_argument(
+        "--chroot_name",
+        default="chroot",
+        help="""
+        the name of the chroot to use in the CrOS checkout. Defaults to
+        'chroot'.
+        """,
+    )
+
+    parser.add_argument(
+        "--chroot_out",
+        help="""
+        the name of the chroot to use in the CrOS checkout. Defaults to
+        'out' if the chroot's name is 'chroot'; otherwise, defaults to
+        '${chroot_name}_out'.
+        """,
     )
 
     # Add argument to choose between llvm and llvm-next.
@@ -67,8 +86,8 @@ def GetCommandLineArgs():
         "Otherwise, update LLVM_HASH",
     )
 
-    # Add argument for the absolute path to the file that contains information on
-    # the previous tested svn version.
+    # Add argument for the absolute path to the file that contains information
+    # on the previous tested svn version.
     parser.add_argument(
         "--last_tested",
         help="the absolute path to the file that contains the last tested "
@@ -92,14 +111,6 @@ def GetCommandLineArgs():
         nargs="+",
         default=[],
         help="The reviewers for the package update changelist",
-    )
-
-    # Add argument for whether to display command contents to `stdout`.
-    parser.add_argument(
-        "--verbose",
-        action="store_true",
-        help="display contents of a command to the terminal "
-        "(default: %(default)s)",
     )
 
     subparsers = parser.add_subparsers(dest="subparser_name")
@@ -161,20 +172,31 @@ def GetCommandLineArgs():
     if args_output.subparser_name not in subparser_names:
         parser.error("one of %s must be specified" % subparser_names)
 
+    if not args_output.chroot_out:
+        chroot_name = args_output.chroot_name
+        if chroot_name == "chroot":
+            out = "out"
+        else:
+            out = f"{chroot_name}_out"
+        args_output.chroot_out = out
+
     return args_output
 
 
-def UnchangedSinceLastRun(last_tested_file, arg_dict):
+def UnchangedSinceLastRun(
+    last_tested_file: Optional[Union[Path, str]],
+    arg_dict: Dict,
+) -> bool:
     """Gets the arguments used for last run
 
     Args:
-      last_tested_file: The absolute path to the file that contains the
-      arguments for the last run.
-      arg_dict: The arguments used for this run.
+        last_tested_file: The absolute path to the file that contains the
+          arguments for the last run.
+        arg_dict: The arguments used for this run.
 
     Returns:
-      Return true if the arguments used for last run exist and are the
-      same as the arguments used for this run. Otherwise return false.
+        Return true if the arguments used for last run exist and are the
+        same as the arguments used for this run. Otherwise return false.
     """
 
     if not last_tested_file:
@@ -183,7 +205,7 @@ def UnchangedSinceLastRun(last_tested_file, arg_dict):
     # Get the last tested svn version if the file exists.
     last_arg_dict = None
     try:
-        with open(last_tested_file) as f:
+        with open(last_tested_file, encoding="utf-8") as f:
             last_arg_dict = json.load(f)
 
     except (IOError, ValueError):
@@ -192,26 +214,46 @@ def UnchangedSinceLastRun(last_tested_file, arg_dict):
     return arg_dict == last_arg_dict
 
 
-def AddReviewers(cl, reviewers, chroot_path):
-    """Add reviewers for the created CL."""
+def AddReviewers(
+    cl: int,
+    reviewers: Iterable[str],
+    chromeos_path: Union[Path, str],
+) -> None:
+    """Add reviewers for the created CL.
 
-    gerrit_abs_path = os.path.join(chroot_path, "chromite/bin/gerrit")
+    Args:
+        cl: The CL number to add reviewers to.
+        reviewers: Email addresses of reviewers to add.
+        chromeos_path: The absolute path to the chromeos tree.
+    """
+
+    gerrit_abs_path = os.path.join(chromeos_path, "chromite/bin/gerrit")
     for reviewer in reviewers:
         cmd = [gerrit_abs_path, "reviewers", str(cl), reviewer]
 
         subprocess.check_output(cmd)
 
 
-def AddLinksToCL(tests, cl, chroot_path):
-    """Adds the test link(s) to the CL as a comment."""
+def AddLinksToCL(
+    tests: Iterable[Dict[str, Any]],
+    cl: int,
+    chromeos_path: Union[Path, str],
+) -> None:
+    """Adds the test link(s) to the CL as a comment.
 
-    # NOTE: Invoking `cros_sdk` does not make each tryjob link appear on its own
-    # line, so invoking the `gerrit` command directly instead of using `cros_sdk`
-    # to do it for us.
+    Args:
+        tests: Links to the tests.
+        cl: The number of the CL to add the test links to.
+        chromeos_path: Absolute path to the chromeos tree.
+    """
+
+    # NOTE: Invoking `cros_sdk` does not make each tryjob link appear on its
+    # own line, so invoking the `gerrit` command directly instead of using
+    # `cros_sdk` to do it for us.
     #
-    # FIXME: Need to figure out why `cros_sdk` does not add each tryjob link as a
-    # newline.
-    gerrit_abs_path = os.path.join(chroot_path, "chromite/bin/gerrit")
+    # FIXME: Need to figure out why `cros_sdk` does not add each tryjob link as
+    # a newline.
+    gerrit_abs_path = os.path.join(chromeos_path, "chromite/bin/gerrit")
 
     links = ["Started the following tests:"]
     links.extend(test["link"] for test in tests)
@@ -222,24 +264,29 @@ def AddLinksToCL(tests, cl, chroot_path):
 
 
 # Testing with tryjobs
-def GetCurrentTimeInUTC():
+def GetCurrentTimeInUTC() -> datetime.datetime:
     """Returns the current time via `datetime.datetime.utcnow()`."""
     return datetime.datetime.utcnow()
 
 
-def GetTryJobCommand(change_list, extra_change_lists, options, builder):
+def GetTryJobCommand(
+    change_list: int,
+    extra_change_lists: Iterable[int],
+    options: Iterable[str],
+    builder: str,
+) -> List[str]:
     """Constructs the 'tryjob' command.
 
     Args:
-      change_list: The CL obtained from updating the packages.
-      extra_change_lists: Extra change lists that would like to be run alongside
-      the change list of updating the packages.
-      options: Options to be passed into the tryjob command.
-      builder: The builder to be passed into the tryjob command.
+        change_list: The CL obtained from updating the packages.
+        extra_change_lists: Extra change lists that would like to be run
+          alongside the change list of updating the packages.
+        options: Options to be passed into the tryjob command.
+        builder: The builder to be passed into the tryjob command.
 
     Returns:
-      The 'tryjob' command with the change list of updating the packages and
-      any extra information that was passed into the command line.
+        The 'tryjob' command with the change list of updating the packages and
+        any extra information that was passed into the command line.
     """
 
     tryjob_cmd = ["cros", "tryjob", "--yes", "--json", "-g", "%d" % change_list]
@@ -256,24 +303,30 @@ def GetTryJobCommand(change_list, extra_change_lists, options, builder):
     return tryjob_cmd
 
 
-def RunTryJobs(cl_number, extra_change_lists, options, builders, chroot_path):
+def RunTryJobs(
+    cl_number: int,
+    extra_change_lists: List[int],
+    options: List[str],
+    builders: Iterable[str],
+    chromeos_path: Union[Path, str],
+) -> List[Dict]:
     """Runs a tryjob/tryjobs.
 
     Args:
-      cl_number: The CL created by updating the packages.
-      extra_change_lists: Any extra change lists that would run alongside the CL
-      that was created by updating the packages ('cl_number').
-      options: Any options to be passed into the 'tryjob' command.
-      builders: All the builders to run the 'tryjob' with.
-      chroot_path: The absolute path to the chroot.
+        cl_number: The CL created by updating the packages.
+        extra_change_lists: Any extra change lists that would run alongside the
+          CL that was created by updating the packages ('cl_number').
+        options: Any options to be passed into the 'tryjob' command.
+        builders: All the builders to run the 'tryjob' with.
+        chromeos_path: The absolute path to the chromeos tree.
 
     Returns:
-      A list that contains stdout contents of each tryjob, where stdout is
-      information (a hashmap) about the tryjob. The hashmap also contains stderr
-      if there was an error when running a tryjob.
+        A list that contains stdout contents of each tryjob, where stdout is
+        information (a hashmap) about the tryjob. The hashmap also contains
+        stderr if there was an error when running a tryjob.
 
     Raises:
-      ValueError: Failed to submit a tryjob.
+        ValueError: Failed to submit a tryjob.
     """
 
     # Contains the results of each builder.
@@ -285,7 +338,7 @@ def RunTryJobs(cl_number, extra_change_lists, options, builders, chroot_path):
     for builder in builders:
         cmd = GetTryJobCommand(cl_number, extra_change_lists, options, builder)
 
-        out = subprocess.check_output(cmd, cwd=chroot_path, encoding="utf-8")
+        out = subprocess.check_output(cmd, cwd=chromeos_path, encoding="utf-8")
 
         test_output = json.loads(out)
 
@@ -302,31 +355,35 @@ def RunTryJobs(cl_number, extra_change_lists, options, builders, chroot_path):
             }
         )
 
-    AddLinksToCL(tests, cl_number, chroot_path)
+    AddLinksToCL(tests, cl_number, chromeos_path)
 
     return tests
 
 
 def StartRecipeBuilders(
-    cl_number, extra_change_lists, options, builders, chroot_path
-):
+    cl_number: int,
+    extra_change_lists: List[int],
+    options: List[str],
+    builders: List[str],
+    chromeos_path: Union[Path, str],
+) -> List[Dict]:
     """Launch recipe builders.
 
     Args:
-      cl_number: The CL created by updating the packages.
-      extra_change_lists: Any extra change lists that would run alongside the CL
-      that was created by updating the packages ('cl_number').
-      options: Any options to be passed into the 'tryjob' command.
-      builders: All the builders to run the 'tryjob' with.
-      chroot_path: The absolute path to the chroot.
+        cl_number: The CL created by updating the packages.
+        extra_change_lists: Any extra change lists that would run alongside the
+          CL that was created by updating the packages ('cl_number').
+        options: Any options to be passed into the 'tryjob' command.
+        builders: All the builders to run the 'tryjob' with.
+        chromeos_path: The absolute path to the chromeos tree.
 
     Returns:
-      A list that contains stdout contents of each builder, where stdout is
-      information (a hashmap) about the tryjob. The hashmap also contains stderr
-      if there was an error when running a tryjob.
+        A list that contains stdout contents of each builder, where stdout is
+        information (a hashmap) about the tryjob. The hashmap also contains
+        stderr if there was an error when running a tryjob.
 
     Raises:
-      ValueError: Failed to start a builder.
+        ValueError: Failed to start a builder.
     """
 
     # Contains the results of each builder.
@@ -350,7 +407,7 @@ def StartRecipeBuilders(
 
         cmd.append(builder)
 
-        out = subprocess.check_output(cmd, cwd=chroot_path, encoding="utf-8")
+        out = subprocess.check_output(cmd, cwd=chromeos_path, encoding="utf-8")
 
         test_output = json.loads(out)
 
@@ -365,25 +422,23 @@ def StartRecipeBuilders(
             }
         )
 
-    AddLinksToCL(tests, cl_number, chroot_path)
+    AddLinksToCL(tests, cl_number, chromeos_path)
 
     return tests
 
 
 # Testing with CQ
-def GetCQDependString(dependent_cls):
+def GetCQDependString(dependent_cls: List[int]) -> Optional[str]:
     """Get CQ dependency string e.g. `Cq-Depend: chromium:MM, chromium:NN`."""
 
     if not dependent_cls:
         return None
 
     # Cq-Depend must start a new paragraph prefixed with "Cq-Depend".
-    return "\nCq-Depend: " + ", ".join(
-        ("chromium:%s" % i) for i in dependent_cls
-    )
+    return "Cq-Depend: " + ", ".join(f"chromium:{x}" for x in dependent_cls)
 
 
-def GetCQIncludeTrybotsString(trybot):
+def GetCQIncludeTrybotsString(trybot: Optional[str]) -> Optional[str]:
     """Get Cq-Include-Trybots string, for more llvm testings"""
 
     if not trybot:
@@ -394,13 +449,17 @@ def GetCQIncludeTrybotsString(trybot):
 
     # Cq-Include-Trybots must start a new paragraph prefixed
     # with "Cq-Include-Trybots".
-    return "\nCq-Include-Trybots:chromeos/cq:cq-%s-orchestrator" % trybot
+    return "Cq-Include-Trybots:chromeos/cq:cq-%s-orchestrator" % trybot
 
 
-def StartCQDryRun(cl, dependent_cls, chroot_path):
+def StartCQDryRun(
+    cl: int,
+    dependent_cls: List[int],
+    chromeos_path: Union[Path, str],
+) -> None:
     """Start CQ dry run for the changelist and dependencies."""
 
-    gerrit_abs_path = os.path.join(chroot_path, "chromite/bin/gerrit")
+    gerrit_abs_path = os.path.join(chromeos_path, "chromite/bin/gerrit")
 
     cl_list = [cl]
     cl_list.extend(dependent_cls)
@@ -415,12 +474,14 @@ def main():
     """Updates the packages' LLVM hash and run tests.
 
     Raises:
-      AssertionError: The script was run inside the chroot.
+        AssertionError: The script was run inside the chroot.
     """
 
     chroot.VerifyOutsideChroot()
 
     args_output = GetCommandLineArgs()
+
+    chroot.VerifyChromeOSRoot(args_output.chromeos_path)
 
     svn_option = args_output.llvm_version
 
@@ -428,14 +489,17 @@ def main():
         svn_option
     )
 
-    # There is no need to run tryjobs when all the key parameters remain unchanged
-    # from last time.
+    # There is no need to run tryjobs when all the key parameters remain
+    # unchanged from last time.
 
     # If --last_tested is specified, check if the current run has the same
     # arguments last time --last_tested is used.
     if args_output.last_tested:
         chroot_file_paths = chroot.GetChrootEbuildPaths(
-            args_output.chroot_path, update_chromeos_llvm_hash.DEFAULT_PACKAGES
+            args_output.chromeos_path,
+            update_chromeos_llvm_hash.DEFAULT_PACKAGES,
+            args_output.chroot_name,
+            args_output.chroot_out,
         )
         arg_dict = {
             "svn_version": svn_version,
@@ -455,15 +519,22 @@ def main():
     llvm_variant = update_chromeos_llvm_hash.LLVMVariant.current
     if args_output.is_llvm_next:
         llvm_variant = update_chromeos_llvm_hash.LLVMVariant.next
-    update_chromeos_llvm_hash.verbose = args_output.verbose
-    extra_commit_msg = None
+
+    extra_commit_msg_lines = []
     if args_output.subparser_name == "cq":
+        footers = []
         cq_depend_msg = GetCQDependString(args_output.extra_change_lists)
         if cq_depend_msg:
-            extra_commit_msg = cq_depend_msg
+            footers.append(cq_depend_msg)
         cq_trybot_msg = GetCQIncludeTrybotsString(args_output.cq_trybot)
         if cq_trybot_msg:
-            extra_commit_msg += cq_trybot_msg
+            footers.append(cq_trybot_msg)
+
+        # We want a single blank line before any of these, so Git properly
+        # interprets them as a footer.
+        if footers:
+            extra_commit_msg_lines.append("")
+            extra_commit_msg_lines += footers
 
     change_list = update_chromeos_llvm_hash.UpdatePackages(
         packages=update_chromeos_llvm_hash.DEFAULT_PACKAGES,
@@ -471,14 +542,21 @@ def main():
         llvm_variant=llvm_variant,
         git_hash=git_hash,
         svn_version=svn_version,
-        chroot_path=args_output.chroot_path,
+        chroot_opts=update_chromeos_llvm_hash.ChrootOpts(
+            chromeos_root=Path(args_output.chromeos_path),
+            chroot_name=args_output.chroot_name,
+            out_name=args_output.chroot_out,
+        ),
         mode=failure_modes.FailureModes.DISABLE_PATCHES,
         git_hash_source=svn_option,
-        extra_commit_msg=extra_commit_msg,
+        extra_commit_msg_lines=extra_commit_msg_lines,
+        # b/331607705: set WIP on these changes, so the code-review-nudger bot
+        # doesn't ping them.
+        wip=True,
     )
 
     AddReviewers(
-        change_list.cl_number, args_output.reviewers, args_output.chroot_path
+        change_list.cl_number, args_output.reviewers, args_output.chromeos_path
     )
 
     print("Successfully updated packages to %d" % svn_version)
@@ -491,7 +569,7 @@ def main():
             args_output.extra_change_lists,
             args_output.options,
             args_output.builders,
-            args_output.chroot_path,
+            args_output.chromeos_path,
         )
         print("Tests:")
         for test in tests:
@@ -502,7 +580,7 @@ def main():
             args_output.extra_change_lists,
             args_output.options,
             args_output.builders,
-            args_output.chroot_path,
+            args_output.chromeos_path,
         )
         print("Tests:")
         for test in tests:
@@ -512,12 +590,12 @@ def main():
         StartCQDryRun(
             change_list.cl_number,
             args_output.extra_change_lists,
-            args_output.chroot_path,
+            args_output.chromeos_path,
         )
 
     # If --last_tested is specified, record the arguments used
     if args_output.last_tested:
-        with open(args_output.last_tested, "w") as f:
+        with open(args_output.last_tested, "w", encoding="utf-8") as f:
             json.dump(arg_dict, f, indent=2)
 
 

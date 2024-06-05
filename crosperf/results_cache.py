@@ -185,13 +185,16 @@ class Result(object):
                 # Otherwise get the base filename and create the correct
                 # path for it.
                 _, f_base = misc.GetRoot(f)
-                data_filename = os.path.join(
-                    self.chromeos_root, "chroot/tmp", self.temp_dir, f_base
+                data_filename = misc.GetOutsideChrootPath(
+                    self.chromeos_root,
+                    os.path.join("/tmp", self.temp_dir, f_base),
                 )
             if data_filename.find(".json") > 0:
                 raw_dict = dict()
                 if os.path.exists(data_filename):
-                    with open(data_filename, "r") as data_file:
+                    with open(
+                        data_filename, "r", encoding="utf-8"
+                    ) as data_file:
                         raw_dict = json.load(data_file)
 
                 if "charts" in raw_dict:
@@ -220,7 +223,9 @@ class Result(object):
                         units_dict[key] = result_dict["units"]
             else:
                 if os.path.exists(data_filename):
-                    with open(data_filename, "r") as data_file:
+                    with open(
+                        data_filename, "r", encoding="utf-8"
+                    ) as data_file:
                         lines = data_file.readlines()
                         for line in lines:
                             tmp_dict = json.loads(line)
@@ -258,22 +263,24 @@ class Result(object):
         return results_dict
 
     def GetKeyvals(self):
-        results_in_chroot = os.path.join(self.chromeos_root, "chroot", "tmp")
+        results_in_chroot = misc.GetOutsideChrootPath(
+            self.chromeos_root, "/tmp"
+        )
         if not self.temp_dir:
             self.temp_dir = tempfile.mkdtemp(dir=results_in_chroot)
             command = f"cp -r {self.results_dir}/* {self.temp_dir}"
             self.ce.RunCommand(command, print_to_console=False)
 
+        tmp_dir_in_chroot = misc.GetInsideChrootPath(
+            self.chromeos_root, self.temp_dir
+        )
         command = "./generate_test_report --no-color --csv %s" % (
-            os.path.join("/tmp", os.path.basename(self.temp_dir))
+            tmp_dir_in_chroot
         )
         _, out, _ = self.ce.ChrootRunCommandWOutput(
             self.chromeos_root, command, print_to_console=False
         )
         keyvals_dict = {}
-        tmp_dir_in_chroot = misc.GetInsideChrootPath(
-            self.chromeos_root, self.temp_dir
-        )
         for line in out.splitlines():
             tokens = re.split("=|,", line)
             key = tokens[-2]
@@ -297,8 +304,8 @@ class Result(object):
             chroot_perf_data_file = misc.GetInsideChrootPath(
                 self.chromeos_root, perf_data_file
             )
-            perf_path = os.path.join(
-                self.chromeos_root, "chroot", "usr/bin/perf"
+            perf_path = misc.GetOutsideChrootPath(
+                self.chromeos_root, "/usr/bin/perf"
             )
             perf_file = "/usr/sbin/perf"
             if os.path.exists(perf_path):
@@ -308,20 +315,19 @@ class Result(object):
             # We specify exact match for known DSO type, and every sample for `all`.
             exact_match = ""
             if self.cwp_dso == "all":
-                exact_match = '""'
+                exact_match = ""
             elif self.cwp_dso == "chrome":
-                exact_match = '" chrome "'
+                exact_match = "chrome"
             elif self.cwp_dso == "kallsyms":
-                exact_match = '"[kernel.kallsyms]"'
+                exact_match = "[kernel.kallsyms]"
             else:
                 # This will need to be updated once there are more DSO types supported,
                 # if user want an exact match for the field they want.
-                exact_match = '"%s"' % self.cwp_dso
+                exact_match = self.cwp_dso
 
-            command = "%s report -n -s dso -i %s 2> /dev/null | grep %s" % (
-                perf_file,
-                chroot_perf_data_file,
-                exact_match,
+            command = (
+                f"{perf_file} report -n -s dso -i "
+                f"{chroot_perf_data_file} 2> /dev/null"
             )
             _, result, _ = self.ce.ChrootRunCommandWOutput(
                 self.chromeos_root, command
@@ -335,6 +341,8 @@ class Result(object):
                 for line in result.split("\n"):
                     attr = line.split()
                     if len(attr) == 3 and "%" in attr[0]:
+                        if exact_match and exact_match != attr[2]:
+                            continue
                         samples += int(attr[1])
             except:
                 raise RuntimeError("Cannot parse perf dso result")
@@ -357,11 +365,12 @@ class Result(object):
                     "default_idle",
                     "cpu_idle_loop",
                     "do_idle",
+                    "cpuidle_enter_state",
                 ),
             }
             idle_samples = 0
 
-            with open(perf_report_file) as f:
+            with open(perf_report_file, encoding="utf-8") as f:
                 try:
                     for line in f:
                         line = line.strip()
@@ -462,10 +471,7 @@ class Result(object):
         return self.FindFilesInResultsDir("-name wait_time.log").split("\n")[0]
 
     def _CheckDebugPath(self, option, path):
-        relative_path = path[1:]
-        out_chroot_path = os.path.join(
-            self.chromeos_root, "chroot", relative_path
-        )
+        out_chroot_path = misc.GetOutsideChrootPath(self.chromeos_root, path)
         if os.path.exists(out_chroot_path):
             if option == "kallsyms":
                 path = os.path.join(path, "System.map-*")
@@ -493,8 +499,8 @@ class Result(object):
             chroot_perf_report_file = misc.GetInsideChrootPath(
                 self.chromeos_root, perf_report_file
             )
-            perf_path = os.path.join(
-                self.chromeos_root, "chroot", "usr/bin/perf"
+            perf_path = misc.GetOutsideChrootPath(
+                self.chromeos_root, "/usr/bin/perf"
             )
 
             perf_file = "/usr/sbin/perf"
@@ -562,7 +568,7 @@ class Result(object):
     def GatherPerfResults(self):
         report_id = 0
         for perf_report_file in self.perf_report_files:
-            with open(perf_report_file, "r") as f:
+            with open(perf_report_file, "r", encoding="utf-8") as f:
                 report_contents = f.read()
                 for group in re.findall(
                     r"Events: (\S+) (\S+)", report_contents
@@ -612,7 +618,7 @@ class Result(object):
             raise IOError("%s does not exist" % filename)
 
         keyvals = {}
-        with open(filename, "r") as f:
+        with open(filename, "r", encoding="utf-8") as f:
             raw_dict = json.load(f)
             if "charts" in raw_dict:
                 raw_dict = raw_dict["charts"]
@@ -660,7 +666,7 @@ class Result(object):
         """
         cpustats = {}
         read_data = ""
-        with open(self.turbostat_log_file) as f:
+        with open(self.turbostat_log_file, encoding="utf-8") as f:
             read_data = f.readlines()
 
         if not read_data:
@@ -732,7 +738,7 @@ class Result(object):
           121 root      20   0       0      0      0 S   1.0   0.0   0:00.45 spi5
         """
         all_data = ""
-        with open(self.top_log_file) as f:
+        with open(self.top_log_file, encoding="utf-8") as f:
             all_data = f.read()
 
         if not all_data:
@@ -874,7 +880,7 @@ class Result(object):
 
         cpustats = {}
         read_data = ""
-        with open(self.cpustats_log_file) as f:
+        with open(self.cpustats_log_file, encoding="utf-8") as f:
             read_data = f.readlines()
 
         if not read_data:
@@ -935,7 +941,7 @@ class Result(object):
             raise IOError("%s does not exist" % filename)
 
         keyvals = {}
-        with open(filename) as f:
+        with open(filename, encoding="utf-8") as f:
             histograms = json.load(f)
             value_map = {}
             # Gets generic set values.
@@ -1129,7 +1135,7 @@ class Result(object):
         if self.perf_data_files and self.top_cmds:
             self.VerifyPerfDataPID()
         if self.wait_time_log_file:
-            with open(self.wait_time_log_file) as f:
+            with open(self.wait_time_log_file, encoding="utf-8") as f:
                 wait_time = f.readline().strip()
                 try:
                     wait_time = float(wait_time)
@@ -1162,7 +1168,7 @@ class Result(object):
         chrome_version = ""
         keys_file = os.path.join(cache_dir, CACHE_KEYS_FILE)
         if os.path.exists(keys_file):
-            with open(keys_file, "r") as f:
+            with open(keys_file, "r", encoding="utf-8") as f:
                 lines = f.readlines()
                 for l in lines:
                     if l.startswith("Google Chrome "):
@@ -1184,7 +1190,7 @@ class Result(object):
 
         # Untar the tarball to a temporary directory
         self.temp_dir = tempfile.mkdtemp(
-            dir=os.path.join(self.chromeos_root, "chroot", "tmp")
+            dir=misc.GetOutsideChrootPath(self.chromeos_root, "/tmp")
         )
 
         command = "cd %s && tar xf %s" % (
@@ -1202,7 +1208,11 @@ class Result(object):
         self.ProcessResults(use_cache=True)
 
     def CleanUp(self, rm_chroot_tmp):
-        if rm_chroot_tmp and self.results_dir:
+        if (
+            rm_chroot_tmp
+            and self.results_dir
+            and self.results_dir != self.temp_dir
+        ):
             dirname, basename = misc.GetRoot(self.results_dir)
             if basename.find("test_that_results_") != -1:
                 command = "rm -rf %s" % self.results_dir
@@ -1240,7 +1250,9 @@ class Result(object):
             pickle.dump(self.retval, f)
 
         if not test_flag.GetTestMode():
-            with open(os.path.join(temp_dir, CACHE_KEYS_FILE), "w") as f:
+            with open(
+                os.path.join(temp_dir, CACHE_KEYS_FILE), "w", encoding="utf-8"
+            ) as f:
                 f.write("%s\n" % self.label.name)
                 f.write("%s\n" % self.label.chrome_version)
                 f.write("%s\n" % self.machine.checksum_string)
@@ -1255,7 +1267,9 @@ class Result(object):
         # Store machine info.
         # TODO(asharif): Make machine_manager a singleton, and don't pass it into
         # this function.
-        with open(os.path.join(temp_dir, MACHINE_FILE), "w") as f:
+        with open(
+            os.path.join(temp_dir, MACHINE_FILE), "w", encoding="utf-8"
+        ) as f:
             f.write(machine_manager.machine_checksum_string[self.label.name])
 
         if os.path.exists(cache_dir):

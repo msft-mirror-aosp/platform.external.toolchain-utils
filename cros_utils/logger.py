@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2019 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -10,6 +9,7 @@
 import os.path
 import sys
 import traceback
+from typing import Union
 
 
 # TODO(yunlian@google.com): Use GetRoot from misc
@@ -19,7 +19,7 @@ def GetRoot(scr_name):
     return (os.path.dirname(abs_path), os.path.basename(abs_path))
 
 
-class Logger(object):
+class Logger:
     """Logging helper class."""
 
     MAX_LOG_FILES = 10
@@ -67,7 +67,7 @@ class Logger(object):
     def _CreateLogFileHandle(self, name):
         fd = None
         try:
-            fd = open(name, "w")
+            fd = open(name, "w", encoding="utf-8")
         except IOError:
             print("Warning: could not open %s for writing." % name)
         return fd
@@ -215,7 +215,7 @@ class Logger(object):
         self.stderr.flush()
 
 
-class MockLogger(object):
+class MockLogger:
     """Logging helper class."""
 
     MAX_LOG_FILES = 10
@@ -363,7 +363,8 @@ def InitLogger(script_name, log_dir, print_console=True, mock=False):
     """Initialize a global logger. To be called only once."""
     # pylint: disable=global-statement
     global main_logger
-    assert not main_logger, "The logger has already been initialized"
+    if main_logger:
+        return main_logger
     rootdir, basefilename = GetRoot(script_name)
     if not log_dir:
         log_dir = rootdir
@@ -371,12 +372,11 @@ def InitLogger(script_name, log_dir, print_console=True, mock=False):
         main_logger = Logger(log_dir, basefilename, print_console)
     else:
         main_logger = MockLogger(log_dir, basefilename, print_console)
-
-
-def GetLogger(log_dir="", mock=False):
-    if not main_logger:
-        InitLogger(sys.argv[0], log_dir, mock=mock)
     return main_logger
+
+
+def GetLogger(log_dir="", mock=False) -> Union[Logger, MockLogger]:
+    return InitLogger(sys.argv[0], log_dir, mock=mock)
 
 
 def HandleUncaughtExceptions(fun):

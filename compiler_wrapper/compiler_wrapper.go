@@ -16,6 +16,11 @@ import (
 	"time"
 )
 
+const (
+	clangCrashArtifactsSubdir = "toolchain/clang_crash_diagnostics"
+	crosArtifactsEnvVar       = "CROS_ARTIFACTS_TMP_DIR"
+)
+
 func callCompiler(env env, cfg *config, inputCmd *command) int {
 	var compilerErr error
 
@@ -94,7 +99,7 @@ func runAndroidClangTidy(env env, cmd *command) error {
 	if !errors.Is(err, context.DeadlineExceeded) {
 		// When used time is over half of TIDY_TIMEOUT, give a warning.
 		// These warnings allow users to fix slow jobs before they get worse.
-		usedSeconds := int(time.Now().Sub(startTime) / time.Second)
+		usedSeconds := int(time.Since(startTime) / time.Second)
 		if usedSeconds > seconds/2 {
 			warning := "%s:1:1: warning: clang-tidy used %d seconds.\n"
 			fmt.Fprintf(env.stdout(), warning, getSourceFile(), usedSeconds)
@@ -109,6 +114,18 @@ func runAndroidClangTidy(env env, cmd *command) error {
 	return nil
 }
 
+func detectCrashArtifactsDir(env env, cfg *config) string {
+	if cfg.isAndroidWrapper {
+		return ""
+	}
+
+	tmpdir, ok := env.getenv(crosArtifactsEnvVar)
+	if !ok {
+		return ""
+	}
+	return filepath.Join(tmpdir, clangCrashArtifactsSubdir)
+}
+
 func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int, err error) {
 	if err := checkUnsupportedFlags(inputCmd); err != nil {
 		return 0, err
@@ -121,6 +138,7 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 	processPrintCmdlineFlag(mainBuilder)
 	env = mainBuilder.env
 	var compilerCmd *command
+	disableWerrorConfig := processForceDisableWerrorFlag(env, cfg, mainBuilder)
 	clangSyntax := processClangSyntaxFlag(mainBuilder)
 
 	rusageEnabled := isRusageEnabled(env)
@@ -151,41 +169,31 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 		}
 	} else {
 		cSrcFile, tidyFlags, tidyMode := processClangTidyFlags(mainBuilder)
-		cSrcFile, iwyuFlags, iwyuMode := processIWYUFlags(mainBuilder)
+		crashArtifactsDir := detectCrashArtifactsDir(env, cfg)
 		if mainBuilder.target.compilerType == clangType {
-			err := prepareClangCommand(mainBuilder)
+			err := prepareClangCommand(crashArtifactsDir, mainBuilder)
 			if err != nil {
 				return 0, err
 			}
 			if tidyMode != tidyModeNone {
 				allowCCache = false
+				// Remove and ignore goma flags.
+				_, err := removeOneUserCmdlineFlagWithValue(mainBuilder, "--gomacc-path")
+				if err != nil && err != errNoSuchCmdlineArg {
+					return 0, err
+				}
+
 				clangCmdWithoutRemoteBuildAndCCache := mainBuilder.build()
-				var err error
+
 				switch tidyMode {
 				case tidyModeTricium:
-					if cfg.triciumNitsDir == "" {
-						return 0, newErrorwithSourceLocf("tricium linting was requested, but no nits directory is configured")
-					}
-					err = runClangTidyForTricium(env, clangCmdWithoutRemoteBuildAndCCache, cSrcFile, cfg.triciumNitsDir, tidyFlags, cfg.crashArtifactsDir)
+					err = runClangTidyForTricium(env, clangCmdWithoutRemoteBuildAndCCache, cSrcFile, tidyFlags, crashArtifactsDir)
 				case tidyModeAll:
 					err = runClangTidy(env, clangCmdWithoutRemoteBuildAndCCache, cSrcFile, tidyFlags)
 				default:
 					panic(fmt.Sprintf("Unknown tidy mode: %v", tidyMode))
 				}
 
-				if err != nil {
-					return 0, err
-				}
-			}
-
-			if iwyuMode != iwyuModeNone {
-				if iwyuMode == iwyuModeError {
-					panic(fmt.Sprintf("Unknown IWYU mode"))
-				}
-
-				allowCCache = false
-				clangCmdWithoutRemoteBuildAndCCache := mainBuilder.build()
-				err := runIWYU(env, clangCmdWithoutRemoteBuildAndCCache, cSrcFile, iwyuFlags)
 				if err != nil {
 					return 0, err
 				}
@@ -198,7 +206,7 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 		} else {
 			if clangSyntax {
 				allowCCache = false
-				_, clangCmd, err := calcClangCommand(allowCCache, mainBuilder.clone())
+				_, clangCmd, err := calcClangCommand(crashArtifactsDir, allowCCache, mainBuilder.clone())
 				if err != nil {
 					return 0, err
 				}
@@ -228,11 +236,11 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 		compilerCmd = removeRusageFromCommand(compilerCmd)
 	}
 
-	if shouldForceDisableWerror(env, cfg, mainBuilder.target.compilerType) {
+	if disableWerrorConfig.enabled {
 		if bisectStage != "" {
 			return 0, newUserErrorf("BISECT_STAGE is meaningless with FORCE_DISABLE_WERROR")
 		}
-		return doubleBuildWithWNoError(env, cfg, compilerCmd)
+		return doubleBuildWithWNoError(env, cfg, compilerCmd, disableWerrorConfig)
 	}
 	if shouldCompileWithFallback(env) {
 		if rusageEnabled {
@@ -328,21 +336,34 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 	}
 }
 
-func prepareClangCommand(builder *commandBuilder) (err error) {
+func hasUserArg(argName string, builder *commandBuilder) bool {
+	for _, argValue := range builder.args {
+		if strings.Contains(argValue.value, argName) && argValue.fromUser {
+			return true
+		}
+	}
+	return false
+}
+
+func prepareClangCommand(crashArtifactsDir string, builder *commandBuilder) (err error) {
 	if !builder.cfg.isHostWrapper {
 		processSysrootFlag(builder)
 	}
 	builder.addPreUserArgs(builder.cfg.clangFlags...)
-	if builder.cfg.crashArtifactsDir != "" {
-		builder.addPreUserArgs("-fcrash-diagnostics-dir=" + builder.cfg.crashArtifactsDir)
+
+	var crashDiagFlagName = "-fcrash-diagnostics-dir"
+	if crashArtifactsDir != "" &&
+		!hasUserArg(crashDiagFlagName, builder) {
+		builder.addPreUserArgs(crashDiagFlagName + "=" + crashArtifactsDir)
 	}
+
 	builder.addPostUserArgs(builder.cfg.clangPostFlags...)
 	calcCommonPreUserArgs(builder)
 	return processClangFlags(builder)
 }
 
-func calcClangCommand(allowCCache bool, builder *commandBuilder) (bool, *command, error) {
-	err := prepareClangCommand(builder)
+func calcClangCommand(crashArtifactsDir string, allowCCache bool, builder *commandBuilder) (bool, *command, error) {
+	err := prepareClangCommand(crashArtifactsDir, builder)
 	if err != nil {
 		return false, nil, err
 	}
@@ -361,12 +382,9 @@ func calcGccCommand(enableRusage bool, builder *commandBuilder) (bool, *command,
 	calcCommonPreUserArgs(builder)
 	processGccFlags(builder)
 
-	remoteBuildUsed := false
-	if !builder.cfg.isHostWrapper {
-		var err error
-		if remoteBuildUsed, err = processRemoteBuildAndCCacheFlags(!enableRusage, builder); err != nil {
-			return remoteBuildUsed, nil, err
-		}
+	remoteBuildUsed, err := processRemoteBuildAndCCacheFlags(!enableRusage, builder)
+	if err != nil {
+		return remoteBuildUsed, nil, err
 	}
 	return remoteBuildUsed, builder.build(), nil
 }
@@ -383,12 +401,9 @@ func calcCommonPreUserArgs(builder *commandBuilder) {
 }
 
 func processRemoteBuildAndCCacheFlags(allowCCache bool, builder *commandBuilder) (remoteBuildUsed bool, err error) {
-	remoteBuildUsed = false
-	if !builder.cfg.isHostWrapper {
-		remoteBuildUsed, err = processRemoteBuildFlags(builder)
-		if err != nil {
-			return remoteBuildUsed, err
-		}
+	remoteBuildUsed, err = processRemoteBuildFlags(builder)
+	if err != nil {
+		return remoteBuildUsed, err
 	}
 	if !remoteBuildUsed && allowCCache {
 		processCCacheFlag(builder)

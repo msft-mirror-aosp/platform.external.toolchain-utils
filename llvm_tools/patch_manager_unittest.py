@@ -12,6 +12,7 @@ from typing import Callable
 import unittest
 from unittest import mock
 
+import atomic_write_file
 import patch_manager
 import patch_utils
 
@@ -38,8 +39,8 @@ class PatchManagerTest(unittest.TestCase):
             )
         mock_isdir.assert_called_once()
 
-    # Simulate behavior of 'os.path.isfile()' when the patch metadata file is does
-    # not exist.
+    # Simulate behavior of 'os.path.isfile()' when the patch metadata file is
+    # does not exist.
     @mock.patch.object(Path, "is_file", return_value=False)
     def testInvalidPathToPatchMetadataFilePassedAsCommandLineArgument(
         self, mock_isfile
@@ -103,7 +104,9 @@ class PatchManagerTest(unittest.TestCase):
                 ),
             ]
             patches_path = dirpath / "PATCHES.json"
-            with patch_utils.atomic_write(patches_path, encoding="utf-8") as f:
+            with atomic_write_file.atomic_write(
+                patches_path, encoding="utf-8"
+            ) as f:
                 json.dump([pe.to_dict() for pe in patch_entries], f)
 
             def _harness1(
@@ -165,7 +168,7 @@ class PatchManagerTest(unittest.TestCase):
                     self.assertEqual(result, expected)
 
             # Check patch can apply and fail with good return codes.
-            def _apply_patch_entry_mock1(v, _, patch_entry, **__):
+            def _apply_patch_entry_mock1(v, _, patch_entry, _func, **__):
                 return patch_entry.can_patch_version(v), None
 
             _harness2(
@@ -180,7 +183,7 @@ class PatchManagerTest(unittest.TestCase):
             )
 
             # Early exit check, shouldn't apply later failing patch.
-            def _apply_patch_entry_mock2(v, _, patch_entry, **__):
+            def _apply_patch_entry_mock2(v, _, patch_entry, _func, **__):
                 if (
                     patch_entry.can_patch_version(v)
                     and patch_entry.rel_patch_path == "patch_after.patch"
@@ -195,7 +198,7 @@ class PatchManagerTest(unittest.TestCase):
             )
 
             # Skip check, should exit early on the first patch.
-            def _apply_patch_entry_mock3(v, _, patch_entry, **__):
+            def _apply_patch_entry_mock3(v, _, patch_entry, _func, **__):
                 if (
                     patch_entry.can_patch_version(v)
                     and patch_entry.rel_patch_path == "another.patch"

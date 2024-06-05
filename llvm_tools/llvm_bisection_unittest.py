@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # Copyright 2019 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -8,12 +7,11 @@
 
 """Tests for LLVM bisection."""
 
-
 import json
 import os
 import subprocess
 import unittest
-import unittest.mock as mock
+from unittest import mock
 
 import chroot
 import get_llvm_hash
@@ -58,8 +56,8 @@ class LLVMBisectionTest(unittest.TestCase):
             },
         ]
 
-        # Tuple consists of the new good revision, the new bad revision, a set of
-        # 'pending' revisions, and a set of 'skip' revisions.
+        # Tuple consists of the new good revision, the new bad revision, a set
+        # of 'pending' revisions, and a set of 'skip' revisions.
         expected_revisions_tuple = 120, 140, {130}, {135}
 
         self.assertEqual(
@@ -173,7 +171,7 @@ class LLVMBisectionTest(unittest.TestCase):
 
         # Simulate that the status file exists.
         with test_helpers.CreateTemporaryJsonFile() as temp_json_file:
-            with open(temp_json_file, "w") as f:
+            with open(temp_json_file, "w", encoding="utf-8") as f:
                 test_helpers.WritePrettyJsonFile(test_bisect_state, f)
 
             self.assertEqual(
@@ -196,12 +194,11 @@ class LLVMBisectionTest(unittest.TestCase):
 
     @mock.patch.object(modify_a_tryjob, "AddTryjob")
     def testBisectPassed(self, mock_add_tryjob):
-
         git_hash_list = ["a123testhash1", "a123testhash2", "a123testhash3"]
         revisions_list = [102, 104, 106]
 
-        # Simulate behavior of `AddTryjob()` when successfully launched a tryjob for
-        # the updated packages.
+        # Simulate behavior of `AddTryjob()` when successfully launched a
+        # tryjob for the updated packages.
         @test_helpers.CallCountsToMockFunctions
         def MockAddTryjob(
             call_count,
@@ -209,14 +206,11 @@ class LLVMBisectionTest(unittest.TestCase):
             _git_hash,
             _revision,
             _chroot_path,
-            _patch_file,
             _extra_cls,
             _options,
             _builder,
-            _verbose,
             _svn_revision,
         ):
-
             if call_count < 2:
                 return {"rev": revisions_list[call_count], "status": "pending"}
 
@@ -238,15 +232,14 @@ class LLVMBisectionTest(unittest.TestCase):
         args_output = test_helpers.ArgsOutputTest()
 
         packages = ["sys-devel/llvm"]
-        patch_file = "/abs/path/to/PATCHES.json"
 
         # Create a temporary .JSON file to simulate a status file for bisection.
         with test_helpers.CreateTemporaryJsonFile() as temp_json_file:
-            with open(temp_json_file, "w") as f:
+            with open(temp_json_file, "w", encoding="utf-8") as f:
                 test_helpers.WritePrettyJsonFile(bisection_contents, f)
 
-            # Verify that the status file is updated when an exception happened when
-            # attempting to launch a revision (i.e. progress is not lost).
+            # Verify that the status file is updated when an exception happened
+            # when attempting to launch a revision (i.e. progress is not lost).
             with self.assertRaises(ValueError) as err:
                 llvm_bisection.Bisect(
                     revisions_list,
@@ -254,12 +247,10 @@ class LLVMBisectionTest(unittest.TestCase):
                     bisection_contents,
                     temp_json_file,
                     packages,
-                    args_output.chroot_path,
-                    patch_file,
+                    args_output.chromeos_path,
                     args_output.extra_change_lists,
                     args_output.options,
                     args_output.builders,
-                    args_output.verbose,
                 )
 
             expected_bisection_contents = {
@@ -271,9 +262,9 @@ class LLVMBisectionTest(unittest.TestCase):
                 ],
             }
 
-            # Verify that the launched tryjobs were added to the status file when
-            # an exception happened.
-            with open(temp_json_file) as f:
+            # Verify that the launched tryjobs were added to the status file
+            # when an exception happened.
+            with open(temp_json_file, encoding="utf-8") as f:
                 json_contents = json.load(f)
 
                 self.assertEqual(json_contents, expected_bisection_contents)
@@ -289,17 +280,18 @@ class LLVMBisectionTest(unittest.TestCase):
     @mock.patch.object(llvm_bisection, "GetCommitsBetween")
     @mock.patch.object(llvm_bisection, "GetRemainingRange")
     @mock.patch.object(llvm_bisection, "LoadStatusFile")
+    @mock.patch.object(chroot, "VerifyChromeOSRoot")
     @mock.patch.object(chroot, "VerifyOutsideChroot", return_value=True)
     def testMainPassed(
         self,
         mock_outside_chroot,
+        mock_chromeos_root,
         mock_load_status_file,
         mock_get_range,
         mock_get_revision_and_hash_list,
         _mock_get_bad_llvm_hash,
         mock_abandon_cl,
     ):
-
         start = 500
         end = 502
         cl = 1
@@ -329,13 +321,15 @@ class LLVMBisectionTest(unittest.TestCase):
         args_output.end_rev = end
         args_output.parallel = 3
         args_output.src_path = None
-        args_output.chroot_path = "somepath"
+        args_output.chromeos_path = "somepath"
         args_output.cleanup = True
 
         self.assertEqual(
             llvm_bisection.main(args_output),
             llvm_bisection.BisectionExitStatus.BISECTION_COMPLETE.value,
         )
+
+        mock_chromeos_root.assert_called_once()
 
         mock_outside_chroot.assert_called_once()
 
@@ -351,7 +345,7 @@ class LLVMBisectionTest(unittest.TestCase):
             mock.call(
                 [
                     os.path.join(
-                        args_output.chroot_path, "chromite/bin/gerrit"
+                        args_output.chromeos_path, "chromite/bin/gerrit"
                     ),
                     "abandon",
                     str(cl),
@@ -362,11 +356,11 @@ class LLVMBisectionTest(unittest.TestCase):
         )
 
     @mock.patch.object(llvm_bisection, "LoadStatusFile")
+    @mock.patch.object(chroot, "VerifyChromeOSRoot")
     @mock.patch.object(chroot, "VerifyOutsideChroot", return_value=True)
     def testMainFailedWithInvalidRange(
-        self, mock_outside_chroot, mock_load_status_file
+        self, mock_chromeos_root, mock_outside_chroot, mock_load_status_file
     ):
-
         start = 500
         end = 502
 
@@ -394,6 +388,8 @@ class LLVMBisectionTest(unittest.TestCase):
 
         self.assertEqual(str(err.exception), error_message)
 
+        mock_chromeos_root.assert_called_once()
+
         mock_outside_chroot.assert_called_once()
 
         mock_load_status_file.assert_called_once()
@@ -401,15 +397,16 @@ class LLVMBisectionTest(unittest.TestCase):
     @mock.patch.object(llvm_bisection, "GetCommitsBetween")
     @mock.patch.object(llvm_bisection, "GetRemainingRange")
     @mock.patch.object(llvm_bisection, "LoadStatusFile")
+    @mock.patch.object(chroot, "VerifyChromeOSRoot")
     @mock.patch.object(chroot, "VerifyOutsideChroot", return_value=True)
     def testMainFailedWithPendingBuilds(
         self,
+        mock_chromeos_root,
         mock_outside_chroot,
         mock_load_status_file,
         mock_get_range,
         mock_get_revision_and_hash_list,
     ):
-
         start = 500
         end = 502
         rev = 501
@@ -451,6 +448,8 @@ class LLVMBisectionTest(unittest.TestCase):
 
         self.assertEqual(str(err.exception), error_message)
 
+        mock_chromeos_root.assert_called_once()
+
         mock_outside_chroot.assert_called_once()
 
         mock_load_status_file.assert_called_once()
@@ -462,15 +461,16 @@ class LLVMBisectionTest(unittest.TestCase):
     @mock.patch.object(llvm_bisection, "GetCommitsBetween")
     @mock.patch.object(llvm_bisection, "GetRemainingRange")
     @mock.patch.object(llvm_bisection, "LoadStatusFile")
+    @mock.patch.object(chroot, "VerifyChromeOSRoot")
     @mock.patch.object(chroot, "VerifyOutsideChroot", return_value=True)
     def testMainFailedWithDuplicateBuilds(
         self,
         mock_outside_chroot,
+        mock_chromeos_root,
         mock_load_status_file,
         mock_get_range,
         mock_get_revision_and_hash_list,
     ):
-
         start = 500
         end = 502
         rev = 501
@@ -508,6 +508,8 @@ class LLVMBisectionTest(unittest.TestCase):
         error_message = 'Revision %d exists already in "jobs"' % rev
         self.assertEqual(str(err.exception), error_message)
 
+        mock_chromeos_root.assert_called_once()
+
         mock_outside_chroot.assert_called_once()
 
         mock_load_status_file.assert_called_once()
@@ -523,17 +525,18 @@ class LLVMBisectionTest(unittest.TestCase):
     @mock.patch.object(llvm_bisection, "GetCommitsBetween")
     @mock.patch.object(llvm_bisection, "GetRemainingRange")
     @mock.patch.object(llvm_bisection, "LoadStatusFile")
+    @mock.patch.object(chroot, "VerifyChromeOSRoot")
     @mock.patch.object(chroot, "VerifyOutsideChroot", return_value=True)
     def testMainFailedToAbandonCL(
         self,
         mock_outside_chroot,
+        mock_chromeos_root,
         mock_load_status_file,
         mock_get_range,
         mock_get_revision_and_hash_list,
         _mock_get_bad_llvm_hash,
         mock_abandon_cl,
     ):
-
         start = 500
         end = 502
 
@@ -573,6 +576,8 @@ class LLVMBisectionTest(unittest.TestCase):
             llvm_bisection.main(args_output)
 
         self.assertEqual(err.exception.output, error_message)
+
+        mock_chromeos_root.assert_called_once()
 
         mock_outside_chroot.assert_called_once()
 

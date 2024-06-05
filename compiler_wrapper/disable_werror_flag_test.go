@@ -11,10 +11,15 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
+	"reflect"
+	"regexp"
 	"strings"
 	"testing"
 )
+
+const arbitraryWerrorStderr = "error: foo [-Werror,-Wfoo]"
 
 func TestOmitDoubleBuildForSuccessfulCall(t *testing.T) {
 	withForceDisableWErrorTestContext(t, func(ctx *testContext) {
@@ -51,7 +56,7 @@ func TestDoubleBuildWithWNoErrorFlag(t *testing.T) {
 				if err := verifyArgCount(cmd, 0, "-Wno-error"); err != nil {
 					return err
 				}
-				fmt.Fprint(stderr, "-Werror originalerror")
+				fmt.Fprint(stderr, arbitraryWerrorStderr)
 				return newExitCodeError(1)
 			case 2:
 				if err := verifyArgCount(cmd, 1, "-Wno-error"); err != nil {
@@ -66,6 +71,58 @@ func TestDoubleBuildWithWNoErrorFlag(t *testing.T) {
 		ctx.must(callCompiler(ctx, ctx.cfg, ctx.newCommand(clangX86_64, mainCc)))
 		if ctx.cmdCount != 2 {
 			t.Errorf("expected 2 calls. Got: %d", ctx.cmdCount)
+		}
+	})
+}
+
+func TestDoubleBuildUsesSpecificWnoErrorFlagsForWarningsThatDefaultToErrors(t *testing.T) {
+	withForceDisableWErrorTestContext(t, func(ctx *testContext) {
+		ctx.cmdMock = func(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+			switch ctx.cmdCount {
+			case 1:
+				if err := verifyArgCount(cmd, 0, "-Wno-error"); err != nil {
+					return err
+				}
+				fmt.Fprint(stderr, "error: foo [-Wfoo]")
+				return newExitCodeError(1)
+			case 2:
+				if err := verifyArgCount(cmd, 1, "-Wno-error=foo"); err != nil {
+					return err
+				}
+				if err := verifyArgCount(cmd, 1, "-Wno-error"); err != nil {
+					return err
+				}
+				return nil
+			default:
+				t.Fatalf("unexpected command: %#v", cmd)
+				return nil
+			}
+		}
+		ctx.must(callCompiler(ctx, ctx.cfg, ctx.newCommand(clangX86_64, mainCc)))
+		if ctx.cmdCount != 2 {
+			t.Errorf("expected 2 calls. Got: %d", ctx.cmdCount)
+		}
+	})
+}
+
+func TestDoubleBuildDoesntRecompileIfNoObviousWerrorsExist(t *testing.T) {
+	withForceDisableWErrorTestContext(t, func(ctx *testContext) {
+		ctx.cmdMock = func(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+			if ctx.cmdCount != 1 {
+				t.Fatalf("unexpected command: %#v", cmd)
+			}
+			if err := verifyArgCount(cmd, 0, "-Wno-error"); err != nil {
+				return err
+			}
+			fmt.Fprint(stderr, "error: foo bar baz\nwarning: foo [-Wfoo]")
+			return newExitCodeError(1)
+		}
+		exitCode := callCompiler(ctx, ctx.cfg, ctx.newCommand(clangX86_64, mainCc))
+		if exitCode != 1 {
+			t.Errorf("got exit code %d; want 1", exitCode)
+		}
+		if ctx.cmdCount != 1 {
+			t.Errorf("expected 1 call. Got: %d", ctx.cmdCount)
 		}
 	})
 }
@@ -88,7 +145,7 @@ func TestDoubleBuildWithKnownConfigureFile(t *testing.T) {
 				if err := verifyArgCount(cmd, 0, "-Wno-error"); err != nil {
 					return err
 				}
-				fmt.Fprint(stderr, "-Werror originalerror")
+				fmt.Fprint(stderr, arbitraryWerrorStderr)
 				return newExitCodeError(1)
 			default:
 				t.Fatalf("unexpected command: %#v", cmd)
@@ -114,7 +171,7 @@ func TestDoubleBuildWithWNoErrorAndCCache(t *testing.T) {
 				if err := verifyPath(cmd, "ccache"); err != nil {
 					return err
 				}
-				fmt.Fprint(stderr, "-Werror originalerror")
+				fmt.Fprint(stderr, arbitraryWerrorStderr)
 				return newExitCodeError(1)
 			case 2:
 				if err := verifyPath(cmd, "ccache"); err != nil {
@@ -139,7 +196,7 @@ func TestForwardStdoutAndStderrWhenDoubleBuildSucceeds(t *testing.T) {
 			switch ctx.cmdCount {
 			case 1:
 				fmt.Fprint(stdout, "originalmessage")
-				fmt.Fprint(stderr, "-Werror originalerror")
+				fmt.Fprint(stderr, arbitraryWerrorStderr)
 				return newExitCodeError(1)
 			case 2:
 				fmt.Fprint(stdout, "retrymessage")
@@ -166,7 +223,7 @@ func TestForwardStdoutAndStderrWhenDoubleBuildFails(t *testing.T) {
 			switch ctx.cmdCount {
 			case 1:
 				fmt.Fprint(stdout, "originalmessage")
-				fmt.Fprint(stderr, "-Werror originalerror")
+				fmt.Fprint(stderr, arbitraryWerrorStderr)
 				return newExitCodeError(3)
 			case 2:
 				fmt.Fprint(stdout, "retrymessage")
@@ -181,7 +238,7 @@ func TestForwardStdoutAndStderrWhenDoubleBuildFails(t *testing.T) {
 		if exitCode != 3 {
 			t.Errorf("unexpected exitcode. Got: %d", exitCode)
 		}
-		if err := verifyNonInternalError(ctx.stderrString(), "-Werror originalerror"); err != nil {
+		if err := verifyNonInternalError(ctx.stderrString(), regexp.QuoteMeta(arbitraryWerrorStderr)); err != nil {
 			t.Error(err)
 		}
 		if !strings.Contains(ctx.stdoutString(), "originalmessage") {
@@ -203,7 +260,7 @@ func TestForwardStdinFromDoubleBuild(t *testing.T) {
 
 			switch ctx.cmdCount {
 			case 1:
-				fmt.Fprint(stderr, "-Werror originalerror")
+				fmt.Fprint(stderr, arbitraryWerrorStderr)
 				return newExitCodeError(1)
 			case 2:
 				return nil
@@ -222,7 +279,7 @@ func TestForwardGeneralErrorWhenDoubleBuildFails(t *testing.T) {
 		ctx.cmdMock = func(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 			switch ctx.cmdCount {
 			case 1:
-				fmt.Fprint(stderr, "-Werror originalerror")
+				fmt.Fprint(stderr, arbitraryWerrorStderr)
 				return newExitCodeError(3)
 			case 2:
 				return errors.New("someerror")
@@ -259,7 +316,7 @@ func TestLogWarningsWhenDoubleBuildSucceeds(t *testing.T) {
 			switch ctx.cmdCount {
 			case 1:
 				fmt.Fprint(stdout, "originalmessage")
-				fmt.Fprint(stderr, "-Werror originalerror")
+				fmt.Fprint(stderr, arbitraryWerrorStderr)
 				return newExitCodeError(1)
 			case 2:
 				fmt.Fprint(stdout, "retrymessage")
@@ -297,7 +354,7 @@ func TestLogWarningsWhenDoubleBuildFails(t *testing.T) {
 			switch ctx.cmdCount {
 			case 1:
 				fmt.Fprint(stdout, "originalmessage")
-				fmt.Fprint(stderr, "-Werror originalerror")
+				fmt.Fprint(stderr, arbitraryWerrorStderr)
 				return newExitCodeError(1)
 			case 2:
 				fmt.Fprint(stdout, "retrymessage")
@@ -320,13 +377,17 @@ func withForceDisableWErrorTestContext(t *testing.T, work func(ctx *testContext)
 	withTestContext(t, func(ctx *testContext) {
 		ctx.NoteTestWritesToUmask()
 
-		ctx.env = []string{"FORCE_DISABLE_WERROR=1"}
+		ctx.env = []string{
+			"FORCE_DISABLE_WERROR=1",
+			artifactsTmpDirEnvName + "=" + path.Join(ctx.tempDir, "artifacts"),
+		}
 		work(ctx)
 	})
 }
 
 func readLoggedWarnings(ctx *testContext) *warningsJSONData {
-	files, err := ioutil.ReadDir(ctx.cfg.newWarningsDir)
+	warningsDir := getForceDisableWerrorDir(ctx, ctx.cfg)
+	files, err := ioutil.ReadDir(warningsDir)
 	if err != nil {
 		if _, ok := err.(*os.PathError); ok {
 			return nil
@@ -336,7 +397,7 @@ func readLoggedWarnings(ctx *testContext) *warningsJSONData {
 	if len(files) != 1 {
 		ctx.t.Fatalf("expected 1 warning log file. Got: %s", files)
 	}
-	data, err := ioutil.ReadFile(filepath.Join(ctx.cfg.newWarningsDir, files[0].Name()))
+	data, err := ioutil.ReadFile(filepath.Join(warningsDir, files[0].Name()))
 	if err != nil {
 		ctx.t.Fatal(err)
 	}
@@ -355,7 +416,7 @@ func TestDoubleBuildWerrorChmodsThingsAppropriately(t *testing.T) {
 				if err := verifyArgCount(cmd, 0, "-Wno-error"); err != nil {
 					return err
 				}
-				fmt.Fprint(stderr, "-Werror originalerror")
+				fmt.Fprint(stderr, arbitraryWerrorStderr)
 				return newExitCodeError(1)
 			case 2:
 				if err := verifyArgCount(cmd, 1, "-Wno-error"); err != nil {
@@ -373,8 +434,9 @@ func TestDoubleBuildWerrorChmodsThingsAppropriately(t *testing.T) {
 			t.Fatalf("expected 2 calls. Got: %d", ctx.cmdCount)
 		}
 
-		t.Logf("Warnings dir is at %q", ctx.cfg.newWarningsDir)
-		warningsDir, err := os.Open(ctx.cfg.newWarningsDir)
+		warningsDirPath := getForceDisableWerrorDir(ctx, ctx.cfg)
+		t.Logf("Warnings dir is at %q", warningsDirPath)
+		warningsDir, err := os.Open(warningsDirPath)
 		if err != nil {
 			t.Fatalf("failed to open the new warnings dir: %v", err)
 		}
@@ -408,27 +470,39 @@ func TestDoubleBuildWerrorChmodsThingsAppropriately(t *testing.T) {
 	})
 }
 
+type commandBuilderOpts struct {
+	isGcc  bool
+	cflags []string
+}
+
+func newWerrorCommandBuilderOrDie(t *testing.T, ctx *testContext, opts commandBuilderOpts) *commandBuilder {
+	compiler := "clang"
+	if opts.isGcc {
+		compiler = "gcc"
+	}
+	cmd := ctx.newCommand(compiler, opts.cflags...)
+	b, err := newCommandBuilder(ctx, ctx.cfg, cmd)
+	if err != nil {
+		t.Fatalf("Constructing builder unexpectedly failed: %v", err)
+	}
+	return b
+}
+
 func TestAndroidDisableWerror(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
 		ctx.cfg.isAndroidWrapper = true
 
+		builder := newWerrorCommandBuilderOrDie(t, ctx, commandBuilderOpts{})
+
 		// Disable werror ON
 		ctx.cfg.useLlvmNext = true
-		if !shouldForceDisableWerror(ctx, ctx.cfg, gccType) {
-			t.Errorf("disable Werror not enabled for Android with useLlvmNext")
-		}
-
-		if !shouldForceDisableWerror(ctx, ctx.cfg, clangType) {
+		if !processForceDisableWerrorFlag(ctx, ctx.cfg, builder).enabled {
 			t.Errorf("disable Werror not enabled for Android with useLlvmNext")
 		}
 
 		// Disable werror OFF
 		ctx.cfg.useLlvmNext = false
-		if shouldForceDisableWerror(ctx, ctx.cfg, gccType) {
-			t.Errorf("disable-Werror enabled for Android without useLlvmNext")
-		}
-
-		if shouldForceDisableWerror(ctx, ctx.cfg, clangType) {
+		if processForceDisableWerrorFlag(ctx, ctx.cfg, builder).enabled {
 			t.Errorf("disable-Werror enabled for Android without useLlvmNext")
 		}
 	})
@@ -436,11 +510,8 @@ func TestAndroidDisableWerror(t *testing.T) {
 
 func TestChromeOSNoForceDisableWerror(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
-		if shouldForceDisableWerror(ctx, ctx.cfg, gccType) {
-			t.Errorf("disable Werror enabled for ChromeOS without FORCE_DISABLE_WERROR set")
-		}
-
-		if shouldForceDisableWerror(ctx, ctx.cfg, clangType) {
+		builder := newWerrorCommandBuilderOrDie(t, ctx, commandBuilderOpts{})
+		if processForceDisableWerrorFlag(ctx, ctx.cfg, builder).enabled {
 			t.Errorf("disable Werror enabled for ChromeOS without FORCE_DISABLE_WERROR set")
 		}
 	})
@@ -448,12 +519,97 @@ func TestChromeOSNoForceDisableWerror(t *testing.T) {
 
 func TestChromeOSForceDisableWerrorOnlyAppliesToClang(t *testing.T) {
 	withForceDisableWErrorTestContext(t, func(ctx *testContext) {
-		if !shouldForceDisableWerror(ctx, ctx.cfg, clangType) {
+		ctx.env = append(ctx.env, "FORCE_DISABLE_WERROR=1")
+		builder := newWerrorCommandBuilderOrDie(t, ctx, commandBuilderOpts{})
+		if !processForceDisableWerrorFlag(ctx, ctx.cfg, builder).enabled {
 			t.Errorf("Disable -Werror should be enabled for clang.")
 		}
 
-		if shouldForceDisableWerror(ctx, ctx.cfg, gccType) {
+		builder = newWerrorCommandBuilderOrDie(t, ctx, commandBuilderOpts{isGcc: true})
+		if processForceDisableWerrorFlag(ctx, ctx.cfg, builder).enabled {
 			t.Errorf("Disable -Werror should be disabled for gcc.")
+		}
+	})
+}
+
+func TestChromeOSForceDisableWerrorWorksAsFlag(t *testing.T) {
+	withForceDisableWErrorTestContext(t, func(ctx *testContext) {
+		builder := newWerrorCommandBuilderOrDie(t, ctx, commandBuilderOpts{
+			cflags: []string{"-D_CROSTC_FORCE_DISABLE_WERROR=/foo"},
+		})
+		werrorConfig := processForceDisableWerrorFlag(ctx, ctx.cfg, builder)
+		if !werrorConfig.enabled {
+			t.Fatalf("Disable -Werror should be enabled by flag.")
+		}
+
+		if werrorConfig.reportToStdout {
+			t.Errorf("Stdout reporting should be disabled on ChromeOS")
+		} else if werrorConfig.reportDir != "/foo" {
+			t.Errorf("Got werror report dir %s; want /foo", werrorConfig.reportDir)
+		}
+	})
+}
+
+func TestChromeOSForceDisableWerrorIsSuppressedInSrcConfigure(t *testing.T) {
+	withForceDisableWErrorTestContext(t, func(ctx *testContext) {
+		ctx.env = append(ctx.env, "EBUILD_PHASE=configure")
+		builder := newWerrorCommandBuilderOrDie(t, ctx, commandBuilderOpts{
+			cflags: []string{"-D_CROSTC_FORCE_DISABLE_WERROR=/foo"},
+		})
+		werrorConfig := processForceDisableWerrorFlag(ctx, ctx.cfg, builder)
+		if werrorConfig.enabled {
+			t.Fatalf("Disable -Werror should be disabled during src_configure.")
+		}
+	})
+}
+
+func TestChromeOSForceDisableWerrorRemovesClangFlags(t *testing.T) {
+	withForceDisableWErrorTestContext(t, func(ctx *testContext) {
+		builder := newWerrorCommandBuilderOrDie(t, ctx, commandBuilderOpts{
+			cflags: []string{
+				"-D_CROSTC_FORCE_DISABLE_WERROR=/foo",
+				"-D_CROSTC_FORCE_DISABLE_WERROR=/bar",
+				"-Wfoo",
+				"-D_CROSTC_FORCE_DISABLE_WERROR=/baz",
+			},
+		})
+		werrorConfig := processForceDisableWerrorFlag(ctx, ctx.cfg, builder)
+		if !werrorConfig.enabled {
+			t.Fatalf("Disable -Werror should be enabled by flag.")
+		}
+
+		if werrorConfig.reportToStdout {
+			t.Errorf("Stdout reporting should be disabled on ChromeOS")
+		} else if werrorConfig.reportDir != "/baz" {
+			t.Errorf("Got werror report dir %s; want /baz", werrorConfig.reportDir)
+		}
+
+		args := builder.build().Args
+		if want := []string{"-Wfoo"}; !reflect.DeepEqual(args, want) {
+			t.Errorf("Got builder args %#v; want %#v", args, want)
+		}
+	})
+}
+
+func TestChromeOSForceDisableWerrorRemovesGCCFlagsButDoesNotEnableFeature(t *testing.T) {
+	withForceDisableWErrorTestContext(t, func(ctx *testContext) {
+		builder := newWerrorCommandBuilderOrDie(t, ctx, commandBuilderOpts{
+			cflags: []string{
+				"-D_CROSTC_FORCE_DISABLE_WERROR=/foo",
+				"-D_CROSTC_FORCE_DISABLE_WERROR=/bar",
+				"-Wfoo",
+				"-D_CROSTC_FORCE_DISABLE_WERROR=/baz",
+			},
+		})
+		builder.target.compilerType = gccType
+		werrorConfig := processForceDisableWerrorFlag(ctx, ctx.cfg, builder)
+		if werrorConfig.enabled {
+			t.Fatalf("Disable -Werror should not be enabled for GCC.")
+		}
+
+		args := builder.build().Args
+		if want := []string{"-Wfoo"}; !reflect.DeepEqual(args, want) {
+			t.Errorf("Got builder args %#v; want %#v", args, want)
 		}
 	})
 }
