@@ -16,15 +16,14 @@ import shlex
 import shutil
 from typing import List
 
+from cros_utils import cros_paths
 from llvm_tools import chroot
 from llvm_tools import get_llvm_hash
 from pgo_tools import pgo_utils
 
 
 SDK_VERSION_CONF_SUBDIR = (
-    Path("src")
-    / "third_party"
-    / "chromiumos-overlay"
+    cros_paths.CHROMIUMOS_OVERLAY
     / "chromeos"
     / "binhost"
     / "host"

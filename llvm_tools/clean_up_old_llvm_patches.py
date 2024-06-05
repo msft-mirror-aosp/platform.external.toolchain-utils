@@ -13,8 +13,9 @@ import re
 import subprocess
 import sys
 import textwrap
-from typing import List, Optional
+from typing import List
 
+from cros_utils import cros_paths
 from cros_utils import git_utils
 from llvm_tools import patch_utils
 
@@ -27,14 +28,6 @@ CL_REVIEWERS = (git_utils.REVIEWER_DETECTIVE,)
 
 # Folks who should be on the CC-line of any CLs that get uploaded.
 CL_CC = ("gbiv@google.com",)
-
-
-def maybe_autodetect_cros_overlay(my_dir: Path) -> Optional[Path]:
-    third_party = my_dir.parent.parent
-    cros_overlay = third_party / "chromiumos-overlay"
-    if cros_overlay.exists():
-        return cros_overlay
-    return None
 
 
 def remove_old_patches(cros_overlay: Path, min_revision: int) -> bool:
@@ -152,7 +145,7 @@ def find_android_llvm_version(android_toolchain_tree: Path) -> int:
     return int(match.group(1))
 
 
-def get_opts(my_dir: Path, argv: List[str]) -> argparse.Namespace:
+def get_opts(argv: List[str]) -> argparse.Namespace:
     """Returns options for the script."""
 
     parser = argparse.ArgumentParser(
@@ -220,12 +213,15 @@ def get_opts(my_dir: Path, argv: List[str]) -> argparse.Namespace:
     opts = parser.parse_args(argv)
 
     if not opts.chromiumos_overlay:
-        maybe_overlay = maybe_autodetect_cros_overlay(my_dir)
-        if not maybe_overlay:
+        maybe_cros_root = cros_paths.script_chromiumos_checkout()
+        if not maybe_cros_root:
             parser.error(
-                "Failed to autodetect --chromiumos-overlay; please pass a value"
+                "This script must be run from within a CrOS checkout unless "
+                "you specify --chromiumos-overlay."
             )
-        opts.chromiumos_overlay = maybe_overlay
+        opts.chromiumos_overlay = (
+            maybe_cros_root / cros_paths.CHROMIUMOS_OVERLAY
+        )
 
     if not opts.gerrit_tool_cwd:
         opts.gerrit_tool_cwd = opts.chromiumos_overlay
@@ -256,9 +252,7 @@ def main(argv: List[str]) -> None:
         level=logging.INFO,
     )
 
-    my_dir = Path(__file__).resolve().parent
-    opts = get_opts(my_dir, argv)
-
+    opts = get_opts(argv)
     cros_overlay = opts.chromiumos_overlay
     gerrit_tool_cwd = opts.gerrit_tool_cwd
     upload = opts.upload_with_autoreview

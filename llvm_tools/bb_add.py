@@ -9,7 +9,6 @@ import logging
 import os
 from pathlib import Path
 import shlex
-import sys
 from typing import Iterable, List
 
 from llvm_tools import chroot

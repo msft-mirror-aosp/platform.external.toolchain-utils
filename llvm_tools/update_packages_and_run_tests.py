@@ -19,6 +19,7 @@ import subprocess
 import textwrap
 from typing import List, Optional
 
+from cros_utils import cros_paths
 from cros_utils import git_utils
 from llvm_tools import atomic_write_file
 from llvm_tools import chroot
@@ -98,9 +99,7 @@ def create_and_upload_test_helpers_cl(
         The CL number of the test-helper CL, an int referencing an external CL.
         If dry_run is passed, returns 0.
     """
-    chromiumos_overlay = (
-        chromeos_tree / "src" / "third_party" / "chromiumos-overlay"
-    )
+    chromiumos_overlay = chromeos_tree / cros_paths.CHROMIUMOS_OVERLAY
     sha = upload_llvm_testing_helper_cl.create_helper_cl_commit_in_worktree_of(
         chromiumos_overlay, tot
     )

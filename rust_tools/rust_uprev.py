@@ -47,6 +47,7 @@ from typing import (
 )
 import urllib.request
 
+from cros_utils import cros_paths
 from cros_utils import git_utils
 from llvm_tools import chroot
 from pgo_tools_rust import pgo_rust
@@ -90,7 +91,7 @@ EQUERY = "equery"
 GPG = "gpg"
 GSUTIL = "gsutil.py"
 MIRROR_PATH = "gs://chromeos-localmirror/distfiles"
-EBUILD_PREFIX = SOURCE_ROOT / "src/third_party/chromiumos-overlay"
+EBUILD_PREFIX = SOURCE_ROOT / cros_paths.CHROMIUMOS_OVERLAY
 CROS_RUSTC_ECLASS = EBUILD_PREFIX / "eclass/cros-rustc.eclass"
 # Keyserver to use with GPG. Not all keyservers have Rust's signing key;
 # this must be set to a keyserver that does.

@@ -113,6 +113,8 @@ import subprocess
 import sys
 from typing import cast, List, Mapping, Optional
 
+from cros_utils import cros_paths
+
 
 TARGET_TRIPLES = [
     "x86_64-cros-linux-gnu",
@@ -465,9 +467,10 @@ def benchmark_pgo(args):
         crate_name=args.bench_crate_name, crate_version=args.bench_crate_version
     )
 
-    files_dir = Path(
-        "/mnt/host/source/src/third_party/chromiumos-overlay",
-        "dev-lang/rust/files",
+    files_dir = (
+        cros_paths.CHROOT_SOURCE_ROOT
+        / cros_paths.CHROMIUMOS_OVERLAY
+        / "dev-lang/rust/files"
     )
 
     logging.info("Copying profile data to be used in building Rust")

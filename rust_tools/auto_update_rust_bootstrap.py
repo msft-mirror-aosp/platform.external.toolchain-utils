@@ -28,6 +28,7 @@ import sys
 import textwrap
 from typing import Dict, Iterable, List, Optional, Tuple, Union
 
+from cros_utils import cros_paths
 from cros_utils import git_utils
 from rust_tools import copy_rust_bootstrap
 
@@ -726,14 +727,15 @@ def maybe_delete_old_rust_bootstrap_ebuilds(
 
 
 def main(argv: List[str]):
+    cros_checkout = cros_paths.script_chromiumos_checkout_or_exit()
+    py_bin_dir = cros_checkout / cros_paths.TOOLCHAIN_UTILS_PYBIN
+
     logging.basicConfig(
         format=">> %(asctime)s: %(levelname)s: %(filename)s:%(lineno)d: "
         "%(message)s",
         level=logging.INFO,
     )
 
-    my_dir = Path(__file__).parent.resolve()
-    py_bin_dir = my_dir.parent / "py" / "bin"
     parser = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -741,7 +743,7 @@ def main(argv: List[str]):
     parser.add_argument(
         "--chromiumos-overlay",
         type=Path,
-        default=my_dir.parent.parent / "chromiumos-overlay",
+        default=cros_checkout / cros_paths.CHROMIUMOS_OVERLAY,
     )
     parser.add_argument(
         "action",

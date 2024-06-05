@@ -9,9 +9,6 @@ import subprocess
 from typing import Optional
 
 
-# The path to the repository, relative to the root of a ChromeOS tree.
-REPO_PATH = Path("src") / "third_party" / "llvm-project"
-
 # Git remote to query/fetch for upstream.
 UPSTREAM_REMOTE = "cros"
 # Git branch that contains upstream commits.

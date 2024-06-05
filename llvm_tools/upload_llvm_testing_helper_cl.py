@@ -12,9 +12,9 @@ These CLs make the validation of LLVM easier, and do things like:
 import argparse
 import logging
 from pathlib import Path
-import sys
 from typing import List
 
+from cros_utils import cros_paths
 from cros_utils import git_utils
 from llvm_tools import chroot
 from llvm_tools import patch_utils
@@ -156,9 +156,7 @@ def main(argv: List[str]) -> None:
     if not chromeos_tree:
         chromeos_tree = chroot.FindChromeOSRootAboveToolchainUtils()
 
-    chromiumos_overlay = (
-        chromeos_tree / "src" / "third_party" / "chromiumos-overlay"
-    )
+    chromiumos_overlay = chromeos_tree / cros_paths.CHROMIUMOS_OVERLAY
     helper_sha = create_helper_cl_commit_in_worktree_of(
         chromiumos_overlay, tot=opts.tot
     )

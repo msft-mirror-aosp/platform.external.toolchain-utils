@@ -24,6 +24,7 @@ import subprocess
 import sys
 from typing import Optional, Text
 
+from cros_utils import cros_paths
 from llvm_tools import chroot
 
 
@@ -107,7 +108,7 @@ class CommandResult:
 class LLVMRepo:
     """LLVM Repository git and workon information."""
 
-    REPO_PATH = Path("/mnt/host/source/src/third_party/llvm-project")
+    REPO_PATH = cros_paths.CHROOT_SOURCE_ROOT / cros_paths.LLVM_PROJECT
 
     def __init__(self):
         self.workon: Optional[bool] = None

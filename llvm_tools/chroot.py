@@ -7,6 +7,8 @@
 import os
 from pathlib import Path
 
+from cros_utils import cros_paths
+
 
 def InChroot() -> bool:
     """Returns True if currently in the chroot."""
@@ -61,4 +63,7 @@ def FindChromeOSRootAboveToolchainUtils() -> Path:
     Raises:
         ValueError if this checkout is not in a ChromeOS tree.
     """
-    return FindChromeOSRootAbove(Path(__file__).resolve().parent)
+    result = cros_paths.script_chromiumos_checkout()
+    if not result:
+        raise ValueError("This script's checkout is not part of a CrOS tree.")
+    return result

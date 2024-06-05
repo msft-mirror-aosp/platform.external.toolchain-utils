@@ -21,18 +21,19 @@ from pathlib import Path
 import shlex
 import shutil
 import subprocess
-import sys
 from typing import IO, List, Optional, Union
 
+from cros_utils import cros_paths
 from pgo_tools import pgo_utils
 
 
 # The full path to where `sys-devel/llvm` expects local profiles to be if
 # `USE=llvm_pgo_use_local` is specified.
-LOCAL_PROFILE_LOCATION = Path(
-    "/mnt/host/source/src/third_party/chromiumos-overlay",
-    "sys-devel/llvm/files/llvm-local.profdata",
-).resolve()
+LOCAL_PROFILE_LOCATION = (
+    cros_paths.CHROOT_SOURCE_ROOT
+    / cros_paths.CHROMIUMOS_OVERLAY
+    / "sys-devel/llvm/files/llvm-local.profdata"
+)
 
 CHROOT_HYPERFINE = Path.home() / ".cargo/bin/hyperfine"
 

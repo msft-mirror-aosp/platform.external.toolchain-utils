@@ -12,15 +12,10 @@ patch_manager ones). This script simplifies the copying of those around.
 
 import argparse
 import os
+from pathlib import Path
 import shutil
-import sys
 
-
-def _find_repo_root(script_root):
-    repo_root = os.path.abspath(os.path.join(script_root, "../../../../"))
-    if not os.path.isdir(os.path.join(repo_root, ".repo")):
-        return None
-    return repo_root
+from cros_utils import cros_paths
 
 
 def main():
@@ -32,21 +27,12 @@ def main():
     )
     args = parser.parse_args()
 
-    my_dir = os.path.abspath(os.path.dirname(__file__))
-
+    my_dir = Path(os.path.abspath(os.path.dirname(__file__)))
     repo_root = args.chromeos_path
     if repo_root is None:
-        repo_root = _find_repo_root(my_dir)
-        if repo_root is None:
-            sys.exit(
-                "Couldn't detect the CrOS checkout root; please provide a "
-                "value for --chromeos_path"
-            )
+        repo_root = cros_paths.script_chromiumos_checkout_or_exit()
 
-    chromiumos_overlay = os.path.join(
-        repo_root, "src/third_party/chromiumos-overlay"
-    )
-
+    chromiumos_overlay = repo_root / cros_paths.CHROMIUMOS_OVERLAY
     clone_files = [
         "failure_modes.py",
         "get_llvm_hash.py",
@@ -55,11 +41,9 @@ def main():
         "subprocess_helpers.py",
     ]
 
-    filesdir = os.path.join(
-        chromiumos_overlay, "sys-devel/llvm/files/patch_manager"
-    )
+    filesdir = chromiumos_overlay / "sys-devel/llvm/files/patch_manager"
     for f in clone_files:
-        source = os.path.join(my_dir, f)
-        dest = os.path.join(filesdir, f)
+        source = my_dir / f
+        dest = filesdir / f
         print("%r => %r" % (source, dest))
         shutil.copyfile(source, dest)

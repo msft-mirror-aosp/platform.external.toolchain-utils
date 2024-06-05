@@ -13,6 +13,7 @@ import shlex
 import subprocess
 from typing import Iterable, List, Optional, Union
 
+from cros_utils import cros_paths
 from llvm_tools import cros_llvm_repo
 from llvm_tools import git_llvm_rev
 
@@ -159,13 +160,14 @@ def _search_overlays_for_ebuild_dir(
 
 
 def main(argv: List[str]) -> None:
+    cros_root = cros_paths.script_chromiumos_checkout_or_exit()
+
     logging.basicConfig(
         format=">> %(asctime)s: %(levelname)s: %(filename)s:%(lineno)d: "
         "%(message)s",
         level=logging.INFO,
     )
 
-    my_dir = Path(__file__).resolve().parent
     parser = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -173,7 +175,7 @@ def main(argv: List[str]) -> None:
     parser.add_argument(
         "--llvm-dir",
         type=lambda x: LLVMSourceDir(path=Path(x)),
-        default=LLVMSourceDir(path=my_dir.parent.parent / "llvm-project"),
+        default=LLVMSourceDir(path=cros_root / cros_paths.LLVM_PROJECT),
         help="Path containing a directory with llvm sources.",
     )
     parser.add_argument(
@@ -253,8 +255,11 @@ def main(argv: List[str]) -> None:
     if not ebuild_dir:
         # All of these are either in toolchains-overlay or chromiumos-overlay.
         overlays = (
-            my_dir.parent.parent / d
-            for d in ("toolchains-overlay", "chromiumos-overlay")
+            cros_root / d
+            for d in (
+                cros_paths.TOOLCHAINS_OVERLAY,
+                cros_paths.CHROMIUMOS_OVERLAY,
+            )
         )
         ebuild_dir = _search_overlays_for_ebuild_dir(package, overlays)
         logging.info("Ebuild directory is %s.", ebuild_dir)

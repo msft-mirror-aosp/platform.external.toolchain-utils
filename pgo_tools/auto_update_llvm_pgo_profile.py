@@ -23,9 +23,9 @@ import subprocess
 import textwrap
 from typing import Dict, List, Optional
 
+from cros_utils import cros_paths
 from cros_utils import git_utils
 from llvm_tools import chroot
-from llvm_tools import cros_llvm_repo
 from llvm_tools import get_llvm_hash
 from llvm_tools import llvm_next
 from pgo_tools import pgo_utils
@@ -234,7 +234,7 @@ def maybe_upload_new_llvm_next_profile(
         profile_cache.insert_profile(llvm_next_rev, profile_suffix)
         return
 
-    llvm_project = chromiumos_tree / cros_llvm_repo.REPO_PATH
+    llvm_project = chromiumos_tree / cros_paths.LLVM_PROJECT
     if not clean_llvm and git_utils.has_discardable_changes(llvm_project):
         raise ValueError(
             f"Uncommitted changes exist in {llvm_project}. Please get rid of "
@@ -368,9 +368,7 @@ def main(argv: List[str]) -> None:
     opts = parse_args(argv)
 
     chromiumos_tree = opts.chromiumos_tree
-    chromiumos_overlay = (
-        chromiumos_tree / "src" / "third_party" / "chromiumos-overlay"
-    )
+    chromiumos_overlay = chromiumos_tree / cros_paths.CHROMIUMOS_OVERLAY
     dry_run = opts.dry_run
 
     logging.info("Populating gs:// profile cache...")

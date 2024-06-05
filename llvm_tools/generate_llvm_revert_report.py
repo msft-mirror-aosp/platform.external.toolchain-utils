@@ -20,6 +20,7 @@ import subprocess
 import sys
 from typing import List, Set, TextIO
 
+from cros_utils import cros_paths
 from llvm_tools import chroot
 from llvm_tools import get_llvm_hash
 from llvm_tools import revert_checker
@@ -78,13 +79,13 @@ def write_reverts_as_csv(write_to: TextIO, reverts: List[RevertInfo]):
 
 
 def main(argv: List[str]):
+    cros_root = cros_paths.script_chromiumos_checkout_or_exit()
+
     logging.basicConfig(
         format=">> %(asctime)s: %(levelname)s: %(filename)s:%(lineno)d: "
         "%(message)s",
         level=logging.INFO,
     )
-
-    my_dir = Path(__name__).resolve().parent
 
     parser = argparse.ArgumentParser(
         description=__doc__,
@@ -93,7 +94,7 @@ def main(argv: List[str]):
     parser.add_argument(
         "-C",
         "--git-dir",
-        default=my_dir.parent / "llvm-project",
+        default=str(cros_root / cros_paths.LLVM_PROJECT),
         help="LLVM git directory to use.",
         # Note that this is left as `type=str` because that's what
         # `revert_checker` expects.
@@ -106,7 +107,7 @@ def main(argv: List[str]):
         "--overlay-dir",
         help="Path to chromiumos-overlay",
         type=Path,
-        default=my_dir.parent / "chromiumos-overlay",
+        default=cros_root / cros_paths.CHROMIUMOS_OVERLAY,
     )
     parser.add_argument(
         "--llvm-head",

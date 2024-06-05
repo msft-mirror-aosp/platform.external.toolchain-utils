@@ -14,10 +14,11 @@ import subprocess
 from typing import List, Optional, Union
 from xml.etree import ElementTree
 
+from cros_utils import cros_paths
 from llvm_tools import atomic_write_file
 
 
-LLVM_PROJECT_PATH = "src/third_party/llvm-project"
+LLVM_PROJECT_PATH = str(cros_paths.LLVM_PROJECT)
 
 
 class FormattingError(Exception):

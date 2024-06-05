@@ -18,18 +18,15 @@ Run this from inside of the chroot.
 import argparse
 import contextlib
 import logging
-from pathlib import Path
 import subprocess
 import sys
 from typing import List
 
+from cros_utils import cros_paths
 from llvm_tools import chroot
 from llvm_tools import get_llvm_hash
 from llvm_tools import manifest_utils
 from llvm_tools import patch_utils
-
-
-CROS_SOURCE_ROOT = Path("/mnt/host/source")
 
 
 @contextlib.contextmanager
@@ -38,7 +35,7 @@ def llvm_checked_out_to(checkout_sha: str):
 
     Restores LLVM to the prior SHA when exited.
     """
-    llvm_dir = CROS_SOURCE_ROOT / manifest_utils.LLVM_PROJECT_PATH
+    llvm_dir = cros_paths.CHROOT_SOURCE_ROOT / manifest_utils.LLVM_PROJECT_PATH
     original_sha = subprocess.run(
         ["git", "rev-parse", "HEAD"],
         check=True,
@@ -90,7 +87,7 @@ def resolve_llvm_sha(llvm_next: bool) -> str:
     hash_obj = get_llvm_hash.LLVMHash()
     if llvm_next:
         return hash_obj.GetCrOSLLVMNextHash()
-    return hash_obj.GetCrOSCurrentLLVMHash(CROS_SOURCE_ROOT)
+    return hash_obj.GetCrOSCurrentLLVMHash(cros_paths.CHROOT_SOURCE_ROOT)
 
 
 def main(argv: List[str]) -> None:
@@ -121,7 +118,9 @@ def main(argv: List[str]) -> None:
         packages_to_stabilize = patch_utils.CHROMEOS_PATCHES_JSON_PACKAGES
         logging.info("Stabilizing %s...", ", ".join(packages_to_stabilize))
 
-        cros_overlay = CROS_SOURCE_ROOT / "src/third_party/chromiumos-overlay"
+        cros_overlay = (
+            cros_paths.CHROOT_SOURCE_ROOT / cros_paths.CHROMIUMOS_OVERLAY
+        )
         return_code = subprocess.run(
             [
                 "cros_mark_as_stable",

@@ -26,20 +26,19 @@ import textwrap
 from typing import Any, Dict, Iterable, List, Optional, Set, Tuple, Union
 from urllib import request
 
+from cros_utils import cros_paths
 from llvm_tools import atomic_write_file
 from llvm_tools import git_llvm_rev
 from llvm_tools import patch_utils
 
 
-CHROMIUMOS_OVERLAY_PATH = Path("src/third_party/chromiumos-overlay")
-LLVM_PKG_PATH = CHROMIUMOS_OVERLAY_PATH / "sys-devel/llvm"
-COMPILER_RT_PKG_PATH = CHROMIUMOS_OVERLAY_PATH / "sys-libs/compiler-rt"
-LIBCXX_PKG_PATH = CHROMIUMOS_OVERLAY_PATH / "sys-libs/libcxx"
-LIBUNWIND_PKG_PATH = CHROMIUMOS_OVERLAY_PATH / "sys-libs/llvm-libunwind"
-SCUDO_PKG_PATH = CHROMIUMOS_OVERLAY_PATH / "sys-libs/scudo"
-LLDB_PKG_PATH = CHROMIUMOS_OVERLAY_PATH / "dev-util/lldb-server"
+LLVM_PKG_PATH = cros_paths.CHROMIUMOS_OVERLAY / "sys-devel/llvm"
+COMPILER_RT_PKG_PATH = cros_paths.CHROMIUMOS_OVERLAY / "sys-libs/compiler-rt"
+LIBCXX_PKG_PATH = cros_paths.CHROMIUMOS_OVERLAY / "sys-libs/libcxx"
+LIBUNWIND_PKG_PATH = cros_paths.CHROMIUMOS_OVERLAY / "sys-libs/llvm-libunwind"
+SCUDO_PKG_PATH = cros_paths.CHROMIUMOS_OVERLAY / "sys-libs/scudo"
+LLDB_PKG_PATH = cros_paths.CHROMIUMOS_OVERLAY / "dev-util/lldb-server"
 
-LLVM_PROJECT_PATH = Path("src/third_party/llvm-project")
 PATCH_METADATA_FILENAME = "PATCHES.json"
 
 
@@ -687,8 +686,8 @@ def parse_args() -> argparse.Namespace:
         )
 
     if not args.llvm:
-        if (args.chromiumos_root / LLVM_PROJECT_PATH).is_dir():
-            args.llvm = args.chromiumos_root / LLVM_PROJECT_PATH
+        if (args.chromiumos_root / cros_paths.LLVM_PROJECT).is_dir():
+            args.llvm = args.chromiumos_root / cros_paths.LLVM_PROJECT
         else:
             parser.error(
                 "Could not autodetect llvm-project dir. Use '-l' to pass the "
