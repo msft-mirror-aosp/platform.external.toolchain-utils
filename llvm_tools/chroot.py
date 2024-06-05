@@ -53,3 +53,12 @@ def FindChromeOSRootAbove(chromeos_tree_path: Path) -> Path:
         if IsChromeOSRoot(parent):
             return parent
     raise ValueError(f"{chromeos_tree_path} is not in a repo checkout")
+
+
+def FindChromeOSRootAboveToolchainUtils() -> Path:
+    """Returns the root of the ChromeOS tree that this checkout exists in.
+
+    Raises:
+        ValueError if this checkout is not in a ChromeOS tree.
+    """
+    return FindChromeOSRootAbove(Path(__file__).resolve().parent)

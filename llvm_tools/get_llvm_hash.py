@@ -414,8 +414,6 @@ def main() -> None:
     Parses the command line for the optional command line
     arguments.
     """
-    my_dir = Path(__file__).parent.resolve()
-
     logging.basicConfig(
         format=">> %(asctime)s: %(levelname)s: %(filename)s:%(lineno)d: "
         "%(message)s",
@@ -450,7 +448,7 @@ def main() -> None:
         # be more easily detected (which allows more flexibility in the
         # implementation in the future for things outside of what directly
         # needs this value).
-        chromeos_tree = chroot.FindChromeOSRootAbove(my_dir)
+        chromeos_tree = chroot.FindChromeOSRootAboveToolchainUtils()
 
     new_llvm_hash = LLVMHash()
     if isinstance(cur_llvm_version, int):

@@ -244,8 +244,7 @@ def main(argv: List[str]):
     if opts.chromiumos_tree:
         repo_root = chroot.FindChromeOSRootAbove(opts.chromiumos_tree)
     else:
-        my_dir = Path(__file__).resolve().parent
-        repo_root = chroot.FindChromeOSRootAbove(my_dir)
+        repo_root = chroot.FindChromeOSRootAboveToolchainUtils()
 
     logging.info("Repo root is %s", repo_root)
 

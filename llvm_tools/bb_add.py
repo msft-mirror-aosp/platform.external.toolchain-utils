@@ -87,7 +87,7 @@ def is_pointless_llvm_next_invocation(chromeos_tree: Path) -> bool:
     return False
 
 
-def parse_opts(my_dir: Path, argv: List[str]) -> argparse.Namespace:
+def parse_opts(argv: List[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -158,7 +158,7 @@ def parse_opts(my_dir: Path, argv: List[str]) -> argparse.Namespace:
         parser.error("At least one bot must be specified.")
 
     if not opts.chromeos_tree:
-        opts.chromeos_tree = chroot.FindChromeOSRootAbove(my_dir)
+        opts.chromeos_tree = chroot.FindChromeOSRootAboveToolchainUtils()
 
     return opts
 
@@ -170,8 +170,7 @@ def main(argv: List[str]) -> None:
         level=logging.INFO,
     )
 
-    my_dir = Path(__file__).parent.resolve()
-    opts = parse_opts(my_dir, argv)
+    opts = parse_opts(argv)
 
     if opts.skip_if_pointless and is_pointless_llvm_next_invocation(
         opts.chromeos_tree

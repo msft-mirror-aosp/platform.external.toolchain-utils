@@ -127,7 +127,7 @@ class GsProfileCache:
         return cls(profiles)
 
 
-def parse_args(my_dir: Path, argv: List[str]) -> argparse.Namespace:
+def parse_args(argv: List[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -165,7 +165,7 @@ def parse_args(my_dir: Path, argv: List[str]) -> argparse.Namespace:
     opts = parser.parse_args(argv)
 
     if not opts.chromiumos_tree:
-        opts.chromiumos_tree = chroot.FindChromeOSRootAbove(my_dir)
+        opts.chromiumos_tree = chroot.FindChromeOSRootAboveToolchainUtils()
     return opts
 
 
@@ -365,7 +365,7 @@ def main(argv: List[str]) -> None:
         "%(message)s",
         level=logging.INFO,
     )
-    opts = parse_args(my_dir, argv)
+    opts = parse_args(argv)
 
     chromiumos_tree = opts.chromiumos_tree
     chromiumos_overlay = (

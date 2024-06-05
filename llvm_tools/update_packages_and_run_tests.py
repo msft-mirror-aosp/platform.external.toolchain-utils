@@ -350,7 +350,6 @@ def parse_opts(argv: List[str]) -> argparse.Namespace:
 
 
 def main(argv: List[str]) -> None:
-    my_dir = Path(__file__).parent.resolve()
     logging.basicConfig(
         format=">> %(asctime)s: %(levelname)s: %(filename)s:%(lineno)d: "
         "%(message)s",
@@ -361,7 +360,7 @@ def main(argv: List[str]) -> None:
     dry_run = opts.dry_run
     chromeos_tree = opts.chromeos_tree
     if not chromeos_tree:
-        chromeos_tree = chroot.FindChromeOSRootAbove(my_dir)
+        chromeos_tree = chroot.FindChromeOSRootAboveToolchainUtils()
 
     new_sha = resolve_llvm_sha(opts.sha)
     logging.info("Using LLVM SHA %s...", new_sha)

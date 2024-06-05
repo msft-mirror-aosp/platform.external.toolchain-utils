@@ -124,7 +124,6 @@ def main(argv: List[str]) -> None:
         level=logging.INFO,
     )
 
-    my_dir = Path(__file__).parent.resolve()
     parser = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -155,7 +154,7 @@ def main(argv: List[str]) -> None:
 
     chromeos_tree = opts.chromeos_tree
     if not chromeos_tree:
-        chromeos_tree = chroot.FindChromeOSRootAbove(my_dir)
+        chromeos_tree = chroot.FindChromeOSRootAboveToolchainUtils()
 
     chromiumos_overlay = (
         chromeos_tree / "src" / "third_party" / "chromiumos-overlay"
