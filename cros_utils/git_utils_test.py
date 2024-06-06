@@ -123,6 +123,28 @@ class Test(unittest.TestCase):
             [7190037],
         )
 
+    def test_parse_message_metadata(self):
+        """Test we can parse commit metadata."""
+
+        message_lines = [
+            "Some subject line here",
+            "",
+            "Here is my commit message!",
+            "",
+            "BUG=None",
+            "TEST=None",
+            "",
+            "patch.cherry: true",
+            "patch.version_range.from: 1245",
+            "patch.version_range.until: null",
+            "Commit-Id: abcdef1234567890",
+        ]
+        parsed = git_utils.parse_message_metadata(message_lines)
+        self.assertEqual(parsed["patch.cherry"], "true")
+        self.assertEqual(parsed["patch.version_range.from"], "1245")
+        self.assertEqual(parsed["patch.version_range.until"], "null")
+        self.assertEqual(parsed.get("BUG"), None)
+
 
 class ShowFileAtRevTest(test_helpers.TempDirTestCase):
     """Class for testing the show-file-at-rev functionality.
@@ -158,4 +180,46 @@ class ShowFileAtRevTest(test_helpers.TempDirTestCase):
 
         self.assertIsNone(
             git_utils.maybe_show_file_at_commit(temp_dir, "HEAD", "bar")
+        )
+
+
+class FormatPatchTest(test_helpers.TempDirTestCase):
+    """Class for testing format_patch.
+
+    This is separated because it derives from TempDirTestCase,
+    which gives us nice temp directories.
+    """
+
+    def setUp(self):
+        """Set up the tests."""
+
+        # This cleans up automatically. No tearDown needed.
+        self.temp_dir = self.make_tempdir()
+        subprocess.run(
+            ["git", "init"],
+            check=True,
+            cwd=self.temp_dir,
+            stdin=subprocess.DEVNULL,
+        )
+        self.foo_contents = "initial commit text"
+        (self.temp_dir / "foo").write_text(self.foo_contents, encoding="utf-8")
+        subject = "Initial commit"
+        git_utils.commit_all_changes(self.temp_dir, message=subject)
+
+        self.foo_contents = "here is special test text :)"
+        (self.temp_dir / "foo").write_text(self.foo_contents, encoding="utf-8")
+        subject = "Second commit"
+        git_utils.commit_all_changes(self.temp_dir, message=subject)
+
+    def test_format_patch(self):
+        """Test that we can format patches correctly."""
+
+        formatted_patch = git_utils.format_patch(self.temp_dir, "HEAD")
+        self.assertIn(
+            "Subject: [PATCH] Second commit",
+            formatted_patch,
+        )
+        self.assertIn(
+            self.foo_contents,
+            formatted_patch,
         )

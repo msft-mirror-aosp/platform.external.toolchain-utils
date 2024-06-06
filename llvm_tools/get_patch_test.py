@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # Copyright 2024 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -73,7 +72,7 @@ class TestGetPatch(unittest.TestCase):
         self.module_patcher = mock.patch.multiple(
             get_patch,
             get_commit_subj=_mock_get_commit_subj,
-            git_format_patch=_mock_git_format_patch,
+            _git_format_patch=_mock_git_format_patch,
             get_changed_packages=_mock_get_changed_packages,
             _write_patch=_mock_write_patch,
         )

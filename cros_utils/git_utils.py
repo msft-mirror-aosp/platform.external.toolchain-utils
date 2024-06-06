@@ -11,7 +11,7 @@ import re
 import shlex
 import subprocess
 import tempfile
-from typing import Generator, Iterable, List, Optional
+from typing import Dict, Generator, Iterable, List, Optional
 
 
 # Email address used to tag the detective as a reviewer.
@@ -351,3 +351,136 @@ def maybe_show_file_at_commit(
         # can't determine that it always `raise`s.
         result.check_returncode()
     return None
+
+
+def commits_between(git_dir: Path, from_ref: str, to_ref: str) -> Iterable[str]:
+    """Return a list of git SHAs between `from_ref` and `to_ref`.
+
+    Args:
+        git_dir: git root directory to get the commits of.
+        from_ref: Starting git ref, exclusive.
+        to_ref: Ending git ref, inclusive.
+
+    Returns:
+        Iterator of git SHAs between the two refs, oldest to newest.
+    """
+    return reversed(
+        subprocess.run(
+            ["git", "log", "--format=%H", f"{from_ref}..{to_ref}"],
+            check=True,
+            cwd=git_dir,
+            stdout=subprocess.PIPE,
+            encoding="utf-8",
+        )
+        .stdout.strip()
+        .splitlines()
+    )
+
+
+def format_patch(git_dir: Path, ref: str) -> str:
+    """Format a patch for a single git ref.
+
+    Args:
+        git_dir: Root directory for a given local git repository.
+        ref: Git ref to make a patch for.
+
+    Returns:
+        The patch file contents.
+    """
+    logging.debug("Formatting patch for %s^..%s", ref, ref)
+    proc = subprocess.run(
+        ["git", "format-patch", "--stdout", f"{ref}^..{ref}"],
+        cwd=git_dir,
+        encoding="utf-8",
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        check=True,
+    )
+    contents = proc.stdout.strip()
+    if not contents:
+        raise ValueError(f"No git diff between {ref}^..{ref}")
+    logging.debug("Patch diff is %d lines long", contents.count("\n"))
+    return contents
+
+
+def get_message_subject(git_dir: Path, ref: str) -> str:
+    """Return the commit message's subject line."""
+    return subprocess.run(
+        ["git", "show", "--format=%s", "-s", ref],
+        cwd=git_dir,
+        encoding="utf-8",
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        check=True,
+    ).stdout.strip()
+
+
+def get_commit_message_metadata(git_dir: Path, ref: str) -> Dict[str, str]:
+    """Return footer information for a given commit."""
+    commit_msg = (
+        subprocess.run(
+            ["git", "show", "--format=%b", "-s", ref],
+            cwd=git_dir,
+            encoding="utf-8",
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            check=True,
+        )
+        .stdout.strip()
+        .splitlines()
+    )
+    return parse_message_metadata(commit_msg)
+
+
+def parse_message_metadata(message_lines: Iterable[str]) -> Dict[str, str]:
+    """Return a dictionary of commit message lines' directives."""
+    regex = re.compile(r"([-\w.]+):(.+)")
+    result = {}
+    for line in message_lines:
+        # Must not lstrip the line, as leading whitespace here is important.
+        line = line.rstrip()
+        if match := regex.match(line):
+            key, value = match.groups()
+            result[key] = value.strip()
+    return result
+
+
+def merge_base(git_dir: Path, refs: List[str]) -> Optional[str]:
+    """Return the git merge-base --octopus between branches.
+
+    Args:
+        git_dir: Root directory for a given local git repository.
+        refs: List of commit refs to find the merge base of.
+
+    Returns:
+        An Optional string which is the git SHA of the merge base.
+        If no merge-base exists or there was an error, return None.
+    """
+    proc = subprocess.run(
+        ["git", "merge-base", "--octopus"] + refs,
+        check=False,
+        cwd=git_dir,
+        encoding="utf-8",
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+    )
+    if not proc.returncode:
+        return proc.stdout.strip()
+    return None
+
+
+def branch_list(git_dir: Path, glob: Optional[str] = None) -> List[str]:
+    """List branches, optionally matching a given glob."""
+    addendum = [glob] if glob else []
+    return (
+        subprocess.run(
+            ["git", "branch", "--format=%(refname)", "-a", "-l"] + addendum,
+            check=True,
+            cwd=git_dir,
+            encoding="utf-8",
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+        )
+        .stdout.strip()
+        .splitlines()
+    )

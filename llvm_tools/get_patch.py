@@ -27,6 +27,7 @@ from typing import Any, Dict, Iterable, List, Optional, Set, Tuple, Union
 from urllib import request
 
 from cros_utils import cros_paths
+from cros_utils import git_utils
 from llvm_tools import atomic_write_file
 from llvm_tools import git_llvm_rev
 from llvm_tools import patch_utils
@@ -209,7 +210,7 @@ class PatchContext:
                     f"Patch at {pe.rel_patch_path}"
                     " already exists in PATCHES.json"
                 )
-            contents = git_format_patch(
+            contents = _git_format_patch(
                 self.llvm_project_dir,
                 patch_source.git_ref,
             )
@@ -287,31 +288,6 @@ def get_commit_subj(git_root_dir: Path, ref: str) -> str:
     ).stdout.strip()
     logging.debug("  -> %s", subj)
     return subj
-
-
-def git_format_patch(git_root_dir: Path, ref: str) -> str:
-    """Format a patch for a single git ref.
-
-    Args:
-        git_root_dir: Root directory for a given local git repository.
-        ref: Git ref to make a patch for.
-
-    Returns:
-        The patch file contents.
-    """
-    logging.debug("Formatting patch for %s^..%s", ref, ref)
-    proc = subprocess.run(
-        ["git", "format-patch", "--stdout", f"{ref}^..{ref}"],
-        cwd=git_root_dir,
-        encoding="utf-8",
-        stdout=subprocess.PIPE,
-        check=True,
-    )
-    contents = proc.stdout.strip()
-    if not contents:
-        raise ValueError(f"No git diff between {ref}^..{ref}")
-    logging.debug("Patch diff is %d lines long", contents.count("\n"))
-    return contents
 
 
 def get_llvm_github_pull(pull_number: int) -> Dict[str, Any]:
@@ -450,7 +426,7 @@ class GitHubPRContext:
                 changed_packages = get_changed_packages(
                     worktree_dir, (self.base_ref, "HEAD")
                 )
-                patch_contents = git_format_patch(worktree_dir, "HEAD")
+                patch_contents = _git_format_patch(worktree_dir, "HEAD")
             finally:
                 logging.debug(
                     "Cleaning up worktree and deleting branch %s",
@@ -579,6 +555,11 @@ def _write_patch(title: str, contents: str, path: Path) -> None:
     # This is mostly separated for mocking.
     logging.info("Writing patch '%s' to '%s'", title, path)
     path.write_text(contents, encoding="utf-8")
+
+
+def _git_format_patch(git_dir: Path, ref: str) -> str:
+    """Wrapper for git_utils.format_patch. Used for mocking."""
+    return git_utils.format_patch(git_dir, ref)
 
 
 def validate_patch_args(
