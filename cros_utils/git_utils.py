@@ -5,6 +5,8 @@
 """Shared utilities for working with git."""
 
 import contextlib
+import dataclasses
+import enum
 import logging
 from pathlib import Path
 import re
@@ -21,6 +23,88 @@ REVIEWER_DETECTIVE = "c-compiler-chrome@google.com"
 CROS_EXTERNAL_REMOTE = "cros"
 CROS_INTERNAL_REMOTE = "cros-internal"
 CROS_MAIN_BRANCH = "main"
+
+
+class Channel(enum.Enum):
+    """An enum that represents ChromeOS channels."""
+
+    # Ordered from closest-to-ToT to farthest-from-ToT
+    CANARY = "canary"
+    BETA = "beta"
+    STABLE = "stable"
+
+    @classmethod
+    def parse(cls, val: str) -> "Channel":
+        for x in cls:
+            if val == x.value:
+                return x
+        raise ValueError(
+            f"No such channel: {val!r}; try one of {[x.value for x in cls]}"
+        )
+
+
+@dataclasses.dataclass(frozen=True, eq=True, order=True)
+class ChannelBranch:
+    """Represents a ChromeOS branch."""
+
+    # Name of the remote that has the branch.
+    remote: str
+    # The ChromeOS release number associated with the branch (e.g., 127 for
+    # M127).
+    release_number: int
+    # The name of the branch.
+    branch_name: str
+
+
+def autodetect_cros_channels(git_repo: Path) -> Dict[Channel, ChannelBranch]:
+    """Autodetects the current ChromeOS channels from a git repo.
+
+    Returns:
+        A map of channels to their associated git branches. There will be one
+        entry per Channel enum value.
+    """
+    stdout = subprocess.run(
+        [
+            "git",
+            "branch",
+            "-r",
+        ],
+        cwd=git_repo,
+        check=True,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        encoding="utf-8",
+    ).stdout
+
+    # Match "${remote}/release-R${branch_number}-${build}.B"
+    branch_re = re.compile(r"([^/]+)/(release-R(\d+)-\d+\.B)")
+    branches = []
+    for line in stdout.splitlines():
+        line = line.strip()
+        if m := branch_re.fullmatch(line):
+            remote, branch_name, branch_number = m.groups()
+            branches.append(
+                ChannelBranch(remote, int(branch_number), branch_name)
+            )
+
+    branches.sort(key=lambda x: x.release_number)
+    if len(branches) < 2:
+        raise ValueError(
+            f"Expected at least two branches, but only found {len(branches)}"
+        )
+
+    stable = branches[-2]
+    beta = branches[-1]
+    canary = ChannelBranch(
+        remote=beta.remote,
+        release_number=beta.release_number + 1,
+        branch_name="main",
+    )
+    return {
+        Channel.CANARY: canary,
+        Channel.BETA: beta,
+        Channel.STABLE: stable,
+    }
 
 
 def _parse_cls_from_upload_output(upload_output: str) -> List[int]:
@@ -342,15 +426,60 @@ def maybe_show_file_at_commit(
         return result.stdout
 
     # If this file does not exist, git will exit with code 128 and we'll get a
-    # stderr message like `fatal: path 'foo' does not exist in 'bar'`.
-    is_dne = (
-        result.returncode == 128 and "' does not exist in '" in result.stderr
+    # stderr message like either:
+    # - `fatal: path 'foo' does not exist in 'bar'`, or
+    # - `fatal: path 'foo' exists on disk, but not in 'bar'`
+    is_dne = result.returncode == 128 and (
+        "' does not exist in '" in result.stderr
+        or "' exists on disk, but not in '" in result.stderr
     )
     if not is_dne:
         # Put `check_returncode` in a branch before the return, since mypy
         # can't determine that it always `raise`s.
         result.check_returncode()
     return None
+
+
+def maybe_list_dir_contents_at_commit(
+    git_dir: Path, ref: str, path_from_git_root: str
+) -> Optional[List[str]]:
+    """Returns files contained in the given directory at the given commit.
+
+    Args:
+        git_dir: Directory to execute in.
+        ref: SHA or ref to get the directory's contents from
+        path_from_git_root: The path from the git dir's root to get directory
+            contents for.
+
+    Returns:
+        None if the directory did not exist; otherwise, a nonempty list of
+        files/directories contained, relative to the directory they're
+        contained in. Directory names end with a trailing `/`.
+
+    Raises:
+        ValueError if the given path exists, but isn't a directory.
+    """
+    raw_contents = maybe_show_file_at_commit(git_dir, ref, path_from_git_root)
+    if not raw_contents:
+        return None
+
+    not_a_dir = lambda: ValueError(
+        f"{path_from_git_root} at {ref} in {git_dir} isn't a directory"
+    )
+    # If this is a directory, stdout will always start with `tree
+    # ${description}\n\n` before listing entries, one line per entry.
+    raw_contents_lines = raw_contents.splitlines()
+    if len(raw_contents_lines) < 3:
+        raise not_a_dir()
+
+    header_line, empty_line, *results = raw_contents_lines
+    if not header_line.startswith("tree "):
+        raise not_a_dir()
+
+    if empty_line.lstrip():
+        raise not_a_dir()
+
+    return results
 
 
 def commits_between(git_dir: Path, from_ref: str, to_ref: str) -> Iterable[str]:

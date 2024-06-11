@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # Copyright 2024 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -37,58 +36,6 @@ class Test(unittest.TestCase):
     def test_kernel_version_formatting(self):
         self.assertEqual(
             str(update_kernel_afdo.KernelVersion(major=5, minor=10)), "5.10"
-        )
-
-    def test_channel_parsing(self):
-        with self.assertRaisesRegex(ValueError, "No such channel.*"):
-            update_kernel_afdo.Channel.parse("not a channel")
-
-        # Ensure these round-trip.
-        for channel in update_kernel_afdo.Channel:
-            self.assertEqual(
-                channel, update_kernel_afdo.Channel.parse(channel.value)
-            )
-
-    @mock.patch.object(subprocess, "run")
-    def test_branch_autodetection(self, subprocess_run):
-        subprocess_run.return_value = subprocess.CompletedProcess(
-            args=[],
-            returncode=0,
-            stdout=textwrap.dedent(
-                """
-                cros/not-a-release-branch
-                cros/release-R121-15699.B
-                cros/release-R122-15753.B
-                cros/release-R123-15786.B
-                cros/also-not-a-release-branch
-                m/main
-                """
-            ),
-        )
-
-        branch_dict = update_kernel_afdo.autodetect_branches(
-            toolchain_utils=self.make_tempdir()
-        )
-
-        self.assertEqual(
-            branch_dict,
-            {
-                update_kernel_afdo.Channel.CANARY: update_kernel_afdo.GitBranch(
-                    remote="cros",
-                    release_number=124,
-                    branch_name="main",
-                ),
-                update_kernel_afdo.Channel.BETA: update_kernel_afdo.GitBranch(
-                    remote="cros",
-                    release_number=123,
-                    branch_name="release-R123-15786.B",
-                ),
-                update_kernel_afdo.Channel.STABLE: update_kernel_afdo.GitBranch(
-                    remote="cros",
-                    release_number=122,
-                    branch_name="release-R122-15753.B",
-                ),
-            },
         )
 
     def test_read_update_cfg_file(self):
@@ -153,58 +100,6 @@ class Test(unittest.TestCase):
         )
         self.assertEqual(profile.file_name_no_suffix, "R124-15808.0-1710149961")
         self.assertEqual(profile.file_name, "R124-15808.0-1710149961.gcov.xz")
-
-    def test_gs_time_parsing(self):
-        self.assertEqual(
-            update_kernel_afdo.datetime_from_gs_time("2024-03-04T10:38:50Z"),
-            datetime.datetime(
-                year=2024,
-                month=3,
-                day=4,
-                hour=10,
-                minute=38,
-                second=50,
-                tzinfo=datetime.timezone.utc,
-            ),
-        )
-
-    @mock.patch.object(subprocess, "run")
-    def test_kernel_profile_fetcher_works(self, subprocess_run):
-        subprocess_run.return_value = subprocess.CompletedProcess(
-            args=[],
-            returncode=0,
-            # Don't use textwrap.dedent; linter complains about the line being
-            # too long in that case.
-            stdout="""
-753112  2024-03-04T10:38:50Z gs://here/5.4/R124-15786.10-1709548729.gcov.xz
-TOTAL: 2 objects, 1234 bytes (1.1KiB)
-""",
-        )
-
-        fetcher = update_kernel_afdo.KernelProfileFetcher()
-        results = fetcher.fetch("gs://here/5.4")
-
-        expected_results = [
-            update_kernel_afdo.KernelGsProfile.from_file_name(
-                update_kernel_afdo.datetime_from_gs_time(
-                    "2024-03-04T10:38:50Z"
-                ),
-                "R124-15786.10-1709548729.gcov.xz",
-            ),
-        ]
-        self.assertEqual(results, expected_results)
-
-    @mock.patch.object(subprocess, "run")
-    def test_kernel_profile_fetcher_handles_no_profiles(self, subprocess_run):
-        subprocess_run.return_value = subprocess.CompletedProcess(
-            args=[],
-            returncode=1,
-            stderr="\nCommandException: One or more URLs matched no objects.\n",
-        )
-
-        fetcher = update_kernel_afdo.KernelProfileFetcher()
-        results = fetcher.fetch("gs://here/5.4")
-        self.assertEqual(results, [])
 
     @mock.patch.object(subprocess, "run")
     def test_kernel_profile_fetcher_caches_urls(self, subprocess_run):
@@ -281,20 +176,4 @@ TOTAL: 2 objects, 1234 bytes (1.1KiB)
         )
         self.assertFalse(
             update_kernel_afdo.write_afdo_descriptor_file(file_path, contents)
-        )
-
-    def test_repo_autodetects_nothing_if_no_repo_dir(self):
-        self.assertIsNone(
-            update_kernel_afdo.find_chromeos_tree_root(
-                Path("/does/not/exist/nor/is/under/a/repo")
-            )
-        )
-
-    def test_repo_autodetects_repo_dir_correctly(self):
-        tmpdir = self.make_tempdir()
-        test_subdir = tmpdir / "a/directory/and/another/one"
-        test_subdir.mkdir(parents=True)
-        (tmpdir / ".repo").mkdir()
-        self.assertEqual(
-            tmpdir, update_kernel_afdo.find_chromeos_tree_root(test_subdir)
         )
