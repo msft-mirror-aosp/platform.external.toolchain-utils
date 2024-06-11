@@ -27,7 +27,7 @@ PACKAGES_TO_COLLECT = patch_utils.CHROMEOS_PATCHES_JSON_PACKAGES
 CL_REVIEWERS = (git_utils.REVIEWER_DETECTIVE,)
 
 # Folks who should be on the CC-line of any CLs that get uploaded.
-CL_CC = ("gbiv@google.com",)
+CL_CC = ("gbiv@chromium.org",)
 
 
 def remove_old_patches(cros_overlay: Path, min_revision: int) -> bool:

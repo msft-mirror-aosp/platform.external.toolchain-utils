@@ -28,10 +28,7 @@ from cros_utils import git_utils
 CL_REVIEWERS = (git_utils.REVIEWER_DETECTIVE,)
 
 # Folks who should be on the CC-line of any CLs that get uploaded.
-CL_CC = (
-    "denik@google.com",
-    "gbiv@google.com",
-)
+CL_CC = ("gbiv@chromium.org",)
 
 # Determine which gsutil to use.
 # 'gsutil.py' is provided by depot_tools, whereas 'gsutil'
