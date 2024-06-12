@@ -19,6 +19,7 @@ import subprocess
 import time
 from typing import Any, Callable, Dict, List, NamedTuple, Set, Tuple
 
+from cros_utils import cros_paths
 from cros_utils import email_sender
 from cros_utils import git_utils
 from cros_utils import tiny_render
@@ -379,7 +380,7 @@ def _upload_patches(
         platforms=["chromiumos"],
     )
     patch_context.apply_patches(get_patch.LLVMGitRef(sha))
-    git_repo_path = Path(chromeos_path) / get_patch.CHROMIUMOS_OVERLAY_PATH
+    git_repo_path = Path(chromeos_path) / cros_paths.CHROMIUMOS_OVERLAY
     commit_message = [
         "llvm: nightly revert patches\n",
     ]
