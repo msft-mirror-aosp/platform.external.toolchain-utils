@@ -45,6 +45,10 @@ _MAX_PATCH_NAME_LENGTH = 128
 _DEFAULT_BRANCH_PATTERN = "*/chromeos/llvm-*"
 
 
+_CHANGE_ID_REGEX = re.compile(r"^change-id:\s*\w+\s*$", re.IGNORECASE)
+_COMMIT_MESSAGE_END_GUESS = re.compile(r"^---(:? .*)?$")
+
+
 @dataclasses.dataclass
 class LLVMPatchContext:
     """Information needed to reason about patches on LLVM branches."""
@@ -113,6 +117,21 @@ def _translate_sha_to_rev_cached(
     return git_llvm_rev.translate_sha_to_rev(llvm_config, sha)
 
 
+def filter_change_id(patch_contents: str) -> str:
+    """Remove the Change-Id line from the commit message."""
+    out = []
+    passed_commit_message = False
+    for line in patch_contents.splitlines(keepends=True):
+        if _COMMIT_MESSAGE_END_GUESS.match(line):
+            passed_commit_message = True
+        elif not passed_commit_message and _CHANGE_ID_REGEX.match(line):
+            # Skip.
+            print("Skipping line...", line)
+            continue
+        out.append(line)
+    return "".join(out)
+
+
 def create_branch_contexts(
     patch_context: LLVMPatchContext,
 ) -> List[BranchContext]:
@@ -145,8 +164,8 @@ def create_branch_contexts(
         )
         this_branch_combos: List[PatchCombo] = []
         for commit_sha in commit_shas:
-            patch_raw_data = git_utils.format_patch(
-                patch_context.llvm_dir, commit_sha
+            patch_raw_data = filter_change_id(
+                git_utils.format_patch(patch_context.llvm_dir, commit_sha)
             )
             commit_metadata = git_utils.parse_message_metadata(
                 patch_raw_data.splitlines()
