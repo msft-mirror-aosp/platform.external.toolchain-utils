@@ -122,9 +122,8 @@ def _find_interesting_android_shas(
 
 
 def _find_interesting_chromeos_shas(
-    chromeos_base: str,
+    chromeos_path: Path,
 ) -> List[Tuple[str, str]]:
-    chromeos_path = Path(chromeos_base)
     llvm_hash = get_llvm_hash.LLVMHash()
 
     current_llvm = llvm_hash.GetCrOSCurrentLLVMHash(chromeos_path)
@@ -312,7 +311,7 @@ def locate_new_reverts_across_shas(
 
 
 def do_cherrypick(
-    chromeos_path: str,
+    chromeos_path: Path,
     llvm_dir: str,
     repository: str,
     interesting_shas: List[Tuple[str, str]],
@@ -368,19 +367,19 @@ def _upload_patches(
     sha: str,
     reverted_sha: str,
     llvm_dir: str,
-    chromeos_path: str,
+    chromeos_path: Path,
     reviewers: List[str],
     cc: List[str],
 ):
     """Mockable helper to create and upload patches."""
     patch_context = get_patch.PatchContext(
         llvm_project_dir=Path(llvm_dir),
-        chromiumos_root=Path(chromeos_path),
+        chromiumos_root=chromeos_path,
         start_ref=get_patch.LLVMGitRef(reverted_sha),
         platforms=["chromiumos"],
     )
     patch_context.apply_patches(get_patch.LLVMGitRef(sha))
-    git_repo_path = Path(chromeos_path) / cros_paths.CHROMIUMOS_OVERLAY
+    git_repo_path = chromeos_path / cros_paths.CHROMIUMOS_OVERLAY
     commit_message = [
         "llvm: nightly revert patches\n",
     ]
@@ -584,6 +583,7 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
     chromeos_subparser.add_argument(
         "--chromeos_dir",
         required=True,
+        type=Path,
         help="Up-to-date CrOS directory to use.",
     )
 
@@ -611,7 +611,6 @@ def main(argv: List[str]) -> int:
     repository = opts.repository
     state_file = opts.state_file
     reviewers = opts.reviewers if opts.reviewers else []
-    chromeos_path = ""
     cc = opts.cc if opts.cc else []
 
     if opts.repository == "chromeos":
@@ -626,6 +625,9 @@ def main(argv: List[str]) -> int:
             well_known=[],
             direct=["android-llvm-dev@google.com"] + cc,
         )
+        # Set this to placate linting bits. Shouldn't be used by
+        # `opts.repository == "android"` code.
+        chromeos_path = Path()
     else:
         raise ValueError(f"Unknown repository {opts.repository}")
 
