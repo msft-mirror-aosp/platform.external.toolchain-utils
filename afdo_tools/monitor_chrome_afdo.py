@@ -271,19 +271,20 @@ def check_cwp_profiles_are_new(
     afdo_profiles: Dict[int, List[ChromeGsProfile]],
     now: datetime.datetime,
     max_profile_age: datetime.timedelta,
-) -> List[Complaint]:
+) -> Dict[int, List[Complaint]]:
     """Checks to see if the CWP profile parts for the given channel look good.
 
     Returns:
-        Any complaints that were had about profiles.
+        Complaints about profiles, per-milestone.
     """
-    complaints = []
+    complaints = {}
     for channel, branch in branches:
         logging.info(
             "Monitoring CWP profiles for M%s (%s)",
             branch.release_number,
             channel,
         )
+        branch_complaints = []
 
         for arch, subtype in monitored_profile_configs():
             most_recent_profile = find_most_recent_branch_profile(
@@ -303,7 +304,7 @@ def check_cwp_profiles_are_new(
             if time_since_modification < max_profile_age:
                 continue
 
-            complaints.append(
+            branch_complaints.append(
                 [
                     textwrap.dedent(
                         f"""\
@@ -321,6 +322,9 @@ def check_cwp_profiles_are_new(
                     ),
                 ]
             )
+
+        if branch_complaints:
+            complaints[branch.release_number] = branch_complaints
     return complaints
 
 
@@ -460,14 +464,14 @@ def check_afdo_profiles_are_new(
     afdo_profiles: Dict[int, List[ChromeGsProfile]],
     now: datetime.datetime,
     max_profile_age: datetime.timedelta,
-) -> List[Complaint]:
+) -> Dict[int, List[Complaint]]:
     """Checks to see if the AFDO profiles for the given channel look good.
 
     Returns:
-        Any complaints that were had about profiles.
+        Complaints about profiles, per-milestone.
     """
     chromium_src = chrome_tree / "src"
-    complaints = []
+    complaints = {}
     for channel, branch in branches:
         logging.info(
             "Monitoring landed AFDO profiles for M%s (%s)",
@@ -492,6 +496,7 @@ def check_afdo_profiles_are_new(
             "Newest Chrome version on %s is %s", channel, newest_chrome_version
         )
 
+        branch_complaints = []
         for arch, subtype in monitored_profile_configs():
             stamp_file = CHROME_STAMP_FILE_LOCATIONS[(arch, subtype)]
             stamp_contents = git_utils.maybe_show_file_at_commit(
@@ -516,9 +521,19 @@ def check_afdo_profiles_are_new(
                 max_profile_age=max_profile_age,
             )
             if maybe_complaint:
-                complaints.append(maybe_complaint)
+                branch_complaints.append(maybe_complaint)
+
+        if branch_complaints:
+            complaints[branch.release_number] = branch_complaints
 
     return complaints
+
+
+def merge_milestone_complaints(
+    a: Dict[int, List[Complaint]], b: Dict[int, List[Complaint]]
+) -> Dict[int, List[Complaint]]:
+    """Merges two per-milestone Complaints dicts into one."""
+    return {k: a.get(k, []) + b.get(k, []) for k in a.keys() | b.keys()}
 
 
 def format_complaint(complaint: Complaint, width: int) -> str:
@@ -594,13 +609,13 @@ def main(argv: List[str]) -> None:
 
     now = datetime.datetime.now(datetime.timezone.utc)
     branch_tuples = [(x, channel_branches[x]) for x in opts.channel]
-    complaints = check_cwp_profiles_are_new(
+    cwp_complaints = check_cwp_profiles_are_new(
         branch_tuples,
         afdo_profiles,
         now,
         max_profile_age=datetime.timedelta(days=opts.max_cwp_age_days),
     )
-    complaints += check_afdo_profiles_are_new(
+    afdo_complaints = check_afdo_profiles_are_new(
         chrome_tree=opts.chrome_tree,
         chromiumos_overlay=chromiumos_overlay,
         branches=branch_tuples,
@@ -608,20 +623,27 @@ def main(argv: List[str]) -> None:
         now=now,
         max_profile_age=datetime.timedelta(days=opts.max_profile_age_days),
     )
-    if not complaints:
+
+    milestone_complaints = merge_milestone_complaints(
+        cwp_complaints, afdo_complaints
+    )
+    if not milestone_complaints:
         logging.info("All checks passed.")
         return
 
-    complaints.sort()
-    print("Problem(s) were detected with AFDO profiles:")
-    for i, complaint in enumerate(complaints):
-        # Set width to 70 because 80cols is standard, and we're adding
-        # indentation below.
-        formatted = format_complaint(complaint, width=70)
-        indented = formatted.replace("\n", "\n\t  ")
+    for i, (milestone, complaints) in enumerate(
+        sorted(milestone_complaints.items())
+    ):
         if i:
             print()
-        print(f"\t- {indented}")
+        print(f"Complaint(s) for M{milestone}:")
+        complaints.sort()
+        for complaint in complaints:
+            # Set width to 70 because 80cols is standard, and we're adding
+            # indentation below.
+            formatted = format_complaint(complaint, width=70)
+            indented = formatted.replace("\n", "\n\t  ")
+            print(f"\t- {indented}")
 
     logging.error("Issues were found; exiting with an error.")
     sys.exit(1)
