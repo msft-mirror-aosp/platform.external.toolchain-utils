@@ -17,6 +17,7 @@ import sys
 import textwrap
 from typing import Dict, Iterable, List, Optional, Tuple
 
+from cros_utils import bugs
 from cros_utils import cros_paths
 from cros_utils import git_utils
 from cros_utils import gs
@@ -26,6 +27,11 @@ from cros_utils import gs
 # There're legacy profile formats/subtypes/arches/etc that we should no longer
 # care about.
 MIN_PROFILE_MAJOR_VERSION = 120
+
+# For synthesized cronjob logs, how many hours should pass without any reports
+# before the job is considered 'turned down'.
+# Default to around a week, since branches come and go 1x/mo.
+CRONJOB_TURNDOWN_TIME_HOURS = 7 * 24
 
 # Complaint is used below to make function signatures clearer. Semantically
 # each Complaint is a list of paragraphs that should be printed together as a
@@ -533,13 +539,55 @@ def merge_milestone_complaints(
     a: Dict[int, List[Complaint]], b: Dict[int, List[Complaint]]
 ) -> Dict[int, List[Complaint]]:
     """Merges two per-milestone Complaints dicts into one."""
-    return {k: a.get(k, []) + b.get(k, []) for k in a.keys() | b.keys()}
+    return {k: sorted(a.get(k, []) + b.get(k, [])) for k in a.keys() | b.keys()}
 
 
 def format_complaint(complaint: Complaint, width: int) -> str:
     """Formats a complaint for printing. May return multiple lines."""
     result_paragraphs = (textwrap.fill(x, width) for x in complaint)
     return "\n\n".join(result_paragraphs)
+
+
+def format_complaints(milestone: int, complaints: List[Complaint], width: int):
+    lines = [f"Complaint(s) for M{milestone}:"]
+    for complaint in sorted(complaints):
+        # Set width to 70 because 80cols is standard, and we're adding
+        # indentation below.
+        formatted = format_complaint(complaint, width=width)
+        indented = formatted.replace("\n", "\n\t  ")
+        lines.append(f"\t- {indented}")
+    return lines
+
+
+def upload_cronjob_reports(
+    branches: List[Tuple[git_utils.Channel, git_utils.ChannelBranch]],
+    milestone_complaints: Dict[int, List[Complaint]],
+) -> None:
+    """Uploads synthesized cronjob reports outlining this script's findings."""
+    for channel, branch in branches:
+        logging.info(
+            "Uploading cronjob report for M%d (%s)...",
+            branch.release_number,
+            channel,
+        )
+        complaints = milestone_complaints.get(branch.release_number)
+        if complaints:
+            failed = True
+            message = format_complaints(
+                branch.release_number,
+                complaints,
+                width=70,
+            )
+        else:
+            failed = False
+            message = "All profiles are sufficiently fresh."
+
+        bugs.SendCronjobLog(
+            cronjob_name=f"Chrome AFDO Monitor, M{branch.release_number}",
+            failed=failed,
+            message=message,
+            turndown_time_hours=CRONJOB_TURNDOWN_TIME_HOURS,
+        )
 
 
 def main(argv: List[str]) -> None:
@@ -574,6 +622,17 @@ def main(argv: List[str]) -> None:
         help="""
         The maximum number of days old the newest CWP profile can be before
         this script starts erroring about it. Default: %(default)s
+        """,
+    )
+    parser.add_argument(
+        "--upload-cronjob-reports",
+        action="store_true",
+        help="""
+        If specified, this script will upload per-channel cronjob reports
+        (for synthesized, per-milestone cronjobs, e.g., `M125 Chrome AFDO
+        monitor`) rather than reporting its results through stdout and exit
+        codes. If this flag is passed, the exit code of this script will be 0
+        even if there are old AFDO profiles detected.
         """,
     )
     parser.add_argument(
@@ -627,6 +686,12 @@ def main(argv: List[str]) -> None:
     milestone_complaints = merge_milestone_complaints(
         cwp_complaints, afdo_complaints
     )
+
+    if opts.upload_cronjob_reports:
+        upload_cronjob_reports(branch_tuples, milestone_complaints)
+        logging.info("All cronjob reports published; my job here is done.")
+        return
+
     if not milestone_complaints:
         logging.info("All checks passed.")
         return
@@ -636,14 +701,7 @@ def main(argv: List[str]) -> None:
     ):
         if i:
             print()
-        print(f"Complaint(s) for M{milestone}:")
-        complaints.sort()
-        for complaint in complaints:
-            # Set width to 70 because 80cols is standard, and we're adding
-            # indentation below.
-            formatted = format_complaint(complaint, width=70)
-            indented = formatted.replace("\n", "\n\t  ")
-            print(f"\t- {indented}")
+        print(format_complaints(milestone, complaints, width=70))
 
     logging.error("Issues were found; exiting with an error.")
-    sys.exit(1)
+    sys.exit(0 if opts.upload_cronjob_reports else 1)
