@@ -444,10 +444,10 @@ def main(argv: List[str]):
         logging.info("No new patches to add. Nothing to do.")
         return
     for combo in new_patch_combos:
-        logging.info("Writing patch '%s'", combo.entry.patch_path())
-        with atomic_write_file.atomic_write(
-            combo.entry.patch_path(), "w", encoding="utf-8"
-        ) as f:
+        patch_path = combo.entry.patch_path()
+        logging.info("Writing patch '%s'", patch_path)
+        patch_path.parent.mkdir(parents=True, exist_ok=True)
+        with atomic_write_file.atomic_write(patch_path, encoding="utf-8") as f:
             f.write(combo.contents)
     logging.info("Writing PATCHES.json to '%s'", patches_json_file)
     with atomic_write_file.atomic_write(
