@@ -425,32 +425,31 @@ def _run_git_applylike(
 
 def _chromiumos_llvm_footer(pe: PatchEntry) -> List[str]:
     is_cherry = pe.rel_patch_path.startswith("cherry/")
-    if pe.metadata and pe.metadata.get("info"):
-        patch_entry_info = [
-            "patch.metadata.info: " + ", ".join(pe.metadata["info"])
-        ]
-    else:
-        patch_entry_info = []
+    # We want to keep the order of these alphabetical,
+    # so the creation of the footer looks a little weird.
+    extra_metadata = []
+    if pe.metadata:
+        if info := pe.metadata.get("info"):
+            extra_metadata.append("patch.metadata.info: " + ", ".join(info))
+        if original_sha := pe.metadata.get("original_sha"):
+            extra_metadata.append(
+                f"patch.metadata.original_sha: {original_sha}"
+            )
     if pe.platforms:
-        patch_entry_platforms = ["patch.platforms: " + ", ".join(pe.platforms)]
-    else:
-        patch_entry_platforms = []
-    from_rev = "null"
+        extra_metadata.append("patch.platforms: " + ", ".join(pe.platforms))
+    from_rev = "0"
     until_rev = "null"
     if pe.version_range:
         if from_rev_int := pe.version_range.get("from"):
             from_rev = str(from_rev_int)
         if until_rev_int := pe.version_range.get("until"):
             until_rev = str(until_rev_int)
-    # We want to keep the order of these alphabetical,
-    # so the creation of the footer looks a little weird.
     return (
         [
             "",
             f"patch.cherry: {str(is_cherry).lower()}",
         ]
-        + patch_entry_info
-        + patch_entry_platforms
+        + extra_metadata
         + [
             f"patch.version_range.from: {from_rev}",
             f"patch.version_range.until: {until_rev}",

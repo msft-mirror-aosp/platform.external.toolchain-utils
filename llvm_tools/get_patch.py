@@ -191,10 +191,11 @@ class PatchContext:
             pe = patch_utils.PatchEntry(
                 workdir=workdir,
                 metadata={
+                    "info": [],
+                    "original_sha": patch_source.git_ref,
                     "title": get_commit_subj(
                         self.llvm_project_dir, patch_source.git_ref
                     ),
-                    "info": [],
                 },
                 platforms=list(self.platforms),
                 rel_patch_path=rel_patch_path,
@@ -232,6 +233,7 @@ class PatchContext:
                 workdir=workdir,
                 metadata={
                     "title": github_ctx.full_title,
+                    "original_sha": None,
                     "info": [],
                 },
                 rel_patch_path=rel_patch_path,

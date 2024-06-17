@@ -110,6 +110,12 @@ def _get_metadata_info(commit_metadata: Dict[str, str]) -> List[str]:
     ]
 
 
+def _get_metadata_original_sha(
+    commit_metadata: Dict[str, str]
+) -> Optional[str]:
+    return commit_metadata.get("patch.metadata.original_sha")
+
+
 @functools.lru_cache
 def _translate_sha_to_rev_cached(
     llvm_config: git_llvm_rev.LLVMConfig, sha: str
@@ -126,7 +132,6 @@ def filter_change_id(patch_contents: str) -> str:
             passed_commit_message = True
         elif not passed_commit_message and _CHANGE_ID_REGEX.match(line):
             # Skip.
-            print("Skipping line...", line)
             continue
         out.append(line)
     return "".join(out)
@@ -173,19 +178,31 @@ def create_branch_contexts(
             subject = git_utils.get_message_subject(
                 patch_context.llvm_dir, commit_sha
             )
+            # When we recreate cherrypicked commits, we want to ensure
+            # we preserve their original upstream SHAs when possible.
+            # This information is sometimes available in the metadata.
+            # We usually try to use the original_sha as the filename too,
+            # when available.
+            original_sha = _get_metadata_original_sha(commit_metadata)
             if commit_metadata.get("patch.cherry", "false").lower() == "true":
-                rel_patch_path = f"cherry/{commit_sha}.patch"
+                if original_sha:
+                    rel_patch_path = f"cherry/{original_sha}.patch"
+                else:
+                    rel_patch_path = f"cherry/{commit_sha}.patch"
             else:
                 cleaned_name = replace_regex.sub("-", subject)[
                     : _MAX_PATCH_NAME_LENGTH + 1
                 ]
                 rel_patch_path = f"{cleaned_name}.patch"
+            metadata = {
+                "info": _get_metadata_info(commit_metadata),
+                "title": subject,
+            }
+            if original_sha:
+                metadata["original_sha"] = original_sha
             entry = patch_utils.PatchEntry(
                 workdir=patch_context.patch_dir,
-                metadata={
-                    "info": _get_metadata_info(commit_metadata),
-                    "title": subject,
-                },
+                metadata=metadata,
                 rel_patch_path=rel_patch_path,
                 platforms=_get_platforms(commit_metadata),
                 version_range={

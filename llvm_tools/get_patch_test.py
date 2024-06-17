@@ -164,7 +164,11 @@ class TestGetPatch(unittest.TestCase):
         fixture = COMMIT_FIXTURES[1]
         fixture_sha = fixture["sha"]
         expected_json_entry = {
-            "metadata": {"title": fixture["subject"], "info": []},
+            "metadata": {
+                "title": fixture["subject"],
+                "original_sha": fixture_sha,
+                "info": [],
+            },
             "platforms": ["some platform"],
             "rel_patch_path": f"cherry/{fixture_sha}.patch",
             "version_range": {
@@ -183,7 +187,11 @@ class TestGetPatch(unittest.TestCase):
         fixture = COMMIT_FIXTURES[1]
         fixture_sha = fixture["sha"]
         expected_json_entry = {
-            "metadata": {"title": fixture["subject"], "info": []},
+            "metadata": {
+                "title": fixture["subject"],
+                "original_sha": fixture_sha,
+                "info": [],
+            },
             "platforms": ["some platform"],
             "rel_patch_path": f"{fixture_sha}.patch",
             "version_range": {
