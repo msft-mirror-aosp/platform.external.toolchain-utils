@@ -548,7 +548,9 @@ def format_complaint(complaint: Complaint, width: int) -> str:
     return "\n\n".join(result_paragraphs)
 
 
-def format_complaints(milestone: int, complaints: List[Complaint], width: int):
+def format_complaints(
+    milestone: int, complaints: List[Complaint], width: int
+) -> str:
     lines = [f"Complaint(s) for M{milestone}:"]
     for complaint in sorted(complaints):
         # Set width to 70 because 80cols is standard, and we're adding
@@ -556,7 +558,7 @@ def format_complaints(milestone: int, complaints: List[Complaint], width: int):
         formatted = format_complaint(complaint, width=width)
         indented = formatted.replace("\n", "\n\t  ")
         lines.append(f"\t- {indented}")
-    return lines
+    return "\n".join(lines)
 
 
 def upload_cronjob_reports(
