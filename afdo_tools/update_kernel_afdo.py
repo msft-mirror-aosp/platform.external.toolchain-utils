@@ -20,6 +20,7 @@ import subprocess
 import sys
 from typing import Dict, Iterable, List, Optional, Tuple
 
+from cros_utils import cros_paths
 from cros_utils import git_utils
 from cros_utils import gs
 
@@ -614,16 +615,8 @@ def upload_head_to_gerrit(
     git_utils.try_set_autosubmit_labels(chromeos_tree, cl_id)
 
 
-def find_chromeos_tree_root(a_dir: Path) -> Optional[Path]:
-    for parent in a_dir.parents:
-        if (parent / ".repo").is_dir():
-            return parent
-    return None
-
-
 def main(argv: List[str]) -> None:
-    my_dir = Path(__file__).resolve().parent
-    toolchain_utils = my_dir.parent
+    toolchain_utils = cros_paths.script_toolchain_utils_root()
 
     opts = get_parser().parse_args(argv)
     logging.basicConfig(
@@ -634,7 +627,7 @@ def main(argv: List[str]) -> None:
 
     chromeos_tree = opts.chromeos_tree
     if not chromeos_tree:
-        chromeos_tree = find_chromeos_tree_root(my_dir)
+        chromeos_tree = cros_paths.script_chromiumos_checkout()
         if chromeos_tree:
             logging.info("Autodetected ChromeOS tree root at %s", chromeos_tree)
 
