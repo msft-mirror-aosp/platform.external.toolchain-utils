@@ -79,7 +79,7 @@ class Test(unittest.TestCase):
         timestamp = datetime.datetime.fromtimestamp(1234, datetime.timezone.utc)
         profile = update_kernel_afdo.KernelGsProfile.from_file_name(
             timestamp,
-            "R124-15808.0-1710149961.gcov.xz",
+            "R124-15808.0-1710149961.afdo.xz",
         )
         self.assertEqual(
             profile,
@@ -87,7 +87,7 @@ class Test(unittest.TestCase):
                 release_number=124,
                 chrome_build="15808.0",
                 cwp_timestamp=1710149961,
-                suffix=".gcov.xz",
+                suffix=".afdo.xz",
                 gs_timestamp=timestamp,
             ),
         )
@@ -96,10 +96,10 @@ class Test(unittest.TestCase):
         timestamp = datetime.datetime.fromtimestamp(1234, datetime.timezone.utc)
         profile = update_kernel_afdo.KernelGsProfile.from_file_name(
             timestamp,
-            "R124-15808.0-1710149961.gcov.xz",
+            "R124-15808.0-1710149961.afdo.xz",
         )
         self.assertEqual(profile.file_name_no_suffix, "R124-15808.0-1710149961")
-        self.assertEqual(profile.file_name, "R124-15808.0-1710149961.gcov.xz")
+        self.assertEqual(profile.file_name, "R124-15808.0-1710149961.afdo.xz")
 
     @mock.patch.object(subprocess, "run")
     def test_kernel_profile_fetcher_caches_urls(self, subprocess_run):
@@ -109,7 +109,7 @@ class Test(unittest.TestCase):
             # Don't use textwrap.dedent; linter complains about the line being
             # too long in that case.
             stdout="""
-753112  2024-03-04T10:38:50Z gs://here/5.4/R124-15786.10-1709548729.gcov.xz
+753112  2024-03-04T10:38:50Z gs://here/5.4/R124-15786.10-1709548729.afdo.xz
 TOTAL: 2 objects, 1234 bytes (1.1KiB)
 """,
         )
@@ -129,11 +129,11 @@ TOTAL: 2 objects, 1234 bytes (1.1KiB)
     def test_newest_afdo_artifact_finding_works(self, fetch):
         late = update_kernel_afdo.KernelGsProfile.from_file_name(
             datetime.datetime.fromtimestamp(1236, datetime.timezone.utc),
-            "R124-15786.10-1709548729.gcov.xz",
+            "R124-15786.10-1709548729.afdo.xz",
         )
         early = update_kernel_afdo.KernelGsProfile.from_file_name(
             datetime.datetime.fromtimestamp(1234, datetime.timezone.utc),
-            "R124-99999.99-9999999999.gcov.xz",
+            "R124-99999.99-9999999999.afdo.xz",
         )
         fetch.return_value = [early, late]
 
