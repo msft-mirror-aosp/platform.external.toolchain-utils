@@ -464,7 +464,7 @@ def maybe_diagnose_current_chrome_afdo_profile(
 
 def check_afdo_profiles_are_new(
     *,
-    chrome_tree: Path,
+    chrome_src: Path,
     chromiumos_overlay: Path,
     branches: List[Tuple[git_utils.Channel, git_utils.ChannelBranch]],
     afdo_profiles: Dict[int, List[ChromeGsProfile]],
@@ -476,7 +476,6 @@ def check_afdo_profiles_are_new(
     Returns:
         Complaints about profiles, per-milestone.
     """
-    chromium_src = chrome_tree / "src"
     complaints = {}
     for channel, branch in branches:
         logging.info(
@@ -506,7 +505,7 @@ def check_afdo_profiles_are_new(
         for arch, subtype in monitored_profile_configs():
             stamp_file = CHROME_STAMP_FILE_LOCATIONS[(arch, subtype)]
             stamp_contents = git_utils.maybe_show_file_at_commit(
-                git_dir=chromium_src,
+                git_dir=chrome_src,
                 ref=newest_chrome_version,
                 path_from_git_root=stamp_file,
             )
@@ -609,6 +608,11 @@ def main(argv: List[str]) -> None:
         help="Path to a Chrome tree to inspect.",
     )
     parser.add_argument(
+        "--fetch",
+        action="store_true",
+        help="Run `git fetch` in relevant directories prior to running.",
+    )
+    parser.add_argument(
         "--max-profile-age-days",
         type=int,
         default=10,
@@ -657,6 +661,13 @@ def main(argv: List[str]) -> None:
 
     chromeos_tree = cros_paths.script_chromiumos_checkout_or_exit()
     chromiumos_overlay = chromeos_tree / cros_paths.CHROMIUMOS_OVERLAY
+    chrome_src = opts.chrome_tree / "src"
+
+    if opts.fetch:
+        logging.info("Fetching chromiumos-overlay...")
+        git_utils.fetch(chromiumos_overlay)
+        logging.info("Fetching chromium...")
+        git_utils.fetch(chrome_src)
 
     channel_branches = git_utils.autodetect_cros_channels(
         git_repo=chromiumos_overlay
@@ -677,7 +688,7 @@ def main(argv: List[str]) -> None:
         max_profile_age=datetime.timedelta(days=opts.max_cwp_age_days),
     )
     afdo_complaints = check_afdo_profiles_are_new(
-        chrome_tree=opts.chrome_tree,
+        chrome_src=chrome_src,
         chromiumos_overlay=chromiumos_overlay,
         branches=branch_tuples,
         afdo_profiles=afdo_profiles,

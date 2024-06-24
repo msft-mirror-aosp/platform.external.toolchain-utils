@@ -343,17 +343,39 @@ def commit_all_changes(git_dir: Path, message: str) -> str:
     return resolve_ref(git_dir, "HEAD")
 
 
+def fetch(
+    git_dir: Path, remote: Optional[str] = None, branch: Optional[str] = None
+) -> None:
+    """Runs `git fetch`.
+
+    Args:
+        git_dir: Directory to execute in.
+        remote: If specified, only the given remote will be fetched.
+        branch: If specified, only the given branch will be fetched. If branch
+            is specified, remote must be, also.
+    """
+    if branch and not remote:
+        raise ValueError("If `branch` is specified, `remote` must also be.")
+
+    cmd = ["git", "fetch"]
+    if remote:
+        cmd.append(remote)
+        if branch:
+            cmd.append(branch)
+    subprocess.run(
+        cmd,
+        check=True,
+        cwd=git_dir,
+        stdin=subprocess.DEVNULL,
+    )
+
+
 def fetch_and_checkout(git_dir: Path, remote: str, branch: str) -> None:
     """Fetches contents of `git_dir`, and checks out `remote/branch`."""
     logging.info(
         "Fetching %s and checking out to %s/%s...", git_dir, remote, branch
     )
-    subprocess.run(
-        ["git", "fetch", remote, branch],
-        check=True,
-        cwd=git_dir,
-        stdin=subprocess.DEVNULL,
-    )
+    fetch(git_dir, remote, branch)
     subprocess.run(
         ["git", "checkout", f"{remote}/{branch}"],
         check=True,
