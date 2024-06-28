@@ -271,7 +271,13 @@ class PatchEntry:
         use git_apply with --summary.
         """
         if any(
-            patch_cmd is cmd for cmd in (git_apply, git_am, git_am_chromiumos)
+            patch_cmd is cmd
+            for cmd in (
+                git_apply,
+                git_am,
+                git_am_chromiumos,
+                git_am_chromiumos_quiet,
+            )
         ):
             # There is no dry run option for git am,
             # so we use git apply for test.
@@ -319,6 +325,28 @@ def git_am_chromiumos(
     extra_args: Optional[List[Union[str, Path]]],
 ) -> PatchResult:
     """Patch a patch file using 'git am', but include footer metadata."""
+    return _git_am_chromiumos_internal(pe, root_dir, patch_path, extra_args)
+
+
+def git_am_chromiumos_quiet(
+    pe: PatchEntry,
+    root_dir: Path,
+    patch_path: Path,
+    extra_args: Optional[List[Union[str, Path]]],
+) -> PatchResult:
+    """Same as git_am_chromiumos, but no stdout."""
+    return _git_am_chromiumos_internal(
+        pe, root_dir, patch_path, extra_args, quiet=True
+    )
+
+
+def _git_am_chromiumos_internal(
+    pe: PatchEntry,
+    root_dir: Path,
+    patch_path: Path,
+    extra_args: Optional[List[Union[str, Path]]],
+    quiet: bool = False,
+) -> PatchResult:
     cmd: List[Union[str, Path]] = ["git", "am", "--3way", patch_path]
     if extra_args:
         cmd += extra_args
@@ -328,6 +356,7 @@ def git_am_chromiumos(
             encoding="utf-8",
             check=True,
             stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL if quiet else None,
             cwd=root_dir,
         )
     except subprocess.CalledProcessError:
@@ -358,6 +387,7 @@ def git_am_chromiumos(
         check=True,
         encoding="utf-8",
         stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL if quiet else None,
         cwd=root_dir,
     )
     return PatchResult(succeeded=True)
