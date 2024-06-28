@@ -462,6 +462,14 @@ def fetch_and_validate_newest_afdo_artifact(
     return newest_artifact.file_name_no_suffix, is_old
 
 
+def remove_untracked_mappings(
+    descriptors: Dict[KernelVersion, str],
+    versions_to_track: Iterable[KernelVersion],
+) -> Dict[KernelVersion, str]:
+    version_set = set(versions_to_track)
+    return {k: v for k, v in descriptors.items() if k in version_set}
+
+
 def update_afdo_for_channel(
     fetcher: KernelProfileFetcher,
     toolchain_utils: Path,
@@ -481,7 +489,10 @@ def update_afdo_for_channel(
     made_changes = False
     had_failures = False
     for arch, cfg in update_cfgs.items():
-        afdo_mappings = read_afdo_descriptor_file(cfg.metadata_file)
+        afdo_mappings = remove_untracked_mappings(
+            read_afdo_descriptor_file(cfg.metadata_file),
+            cfg.versions_to_track,
+        )
         for kernel_version in cfg.versions_to_track:
             if to_skip and (arch, kernel_version) in to_skip:
                 logging.info(

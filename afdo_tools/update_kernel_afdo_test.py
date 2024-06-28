@@ -101,6 +101,19 @@ class Test(unittest.TestCase):
         self.assertEqual(profile.file_name_no_suffix, "R124-15808.0-1710149961")
         self.assertEqual(profile.file_name, "R124-15808.0-1710149961.afdo.xz")
 
+    def test_untracked_version_removal(self):
+        kernel_5_10 = update_kernel_afdo.KernelVersion(5, 10)
+        kernel_5_15 = update_kernel_afdo.KernelVersion(5, 15)
+        kernel_6_1 = update_kernel_afdo.KernelVersion(6, 1)
+
+        self.assertEqual(
+            update_kernel_afdo.remove_untracked_mappings(
+                descriptors={kernel_5_10: "foo", kernel_5_15: "bar"},
+                versions_to_track=(kernel_5_15, kernel_6_1),
+            ),
+            {kernel_5_15: "bar"},
+        )
+
     @mock.patch.object(subprocess, "run")
     def test_kernel_profile_fetcher_caches_urls(self, subprocess_run):
         subprocess_run.return_value = subprocess.CompletedProcess(
