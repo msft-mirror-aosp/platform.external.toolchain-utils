@@ -144,6 +144,52 @@ def create_branch(git_repo: Path, branch_name: str) -> None:
     )
 
 
+def generate_upload_to_gerrit_cmd(
+    remote: str,
+    branch: str,
+    reviewers: Iterable[str] = (),
+    cc: Iterable[str] = (),
+    ref: str = "HEAD",
+    topic: Optional[str] = None,
+) -> List[str]:
+    """Create a git push CLI command to upload to Gerrit.
+
+    This is similar to `upload_to_gerrit`, but doesn't actually
+    run the command. The returned command here is the same
+    as what `upload_to_gerrit` would have run.
+
+    Args:
+        remote: The remote to upload to.
+        branch: The branch to upload to.
+        reviewers: Reviewers to add to the CLs.
+        cc: CCs to add to the CLs.
+        ref: The ref (generally a SHA) to upload. Note that any parents of this
+            that Gerrit does not recognize will be uploaded.
+        topic: Gerrit topic to add the change to.
+
+    Returns:
+        A list representing the command line args to push to the gerrit
+        upstream.
+    """
+    # https://gerrit-review.googlesource.com/Documentation/user-upload.html#reviewers
+    # for more info on the `%` params.
+    option_list = [f"r={x}" for x in reviewers]
+    option_list += (f"cc={x}" for x in cc)
+    if topic is not None:
+        option_list.append(f"topic={topic}")
+    if option_list:
+        trailing_options = "%" + ",".join(option_list)
+    else:
+        trailing_options = ""
+
+    return [
+        "git",
+        "push",
+        remote,
+        f"{ref}:refs/for/{branch}{trailing_options}",
+    ]
+
+
 def upload_to_gerrit(
     git_repo: Path,
     remote: str,
@@ -168,24 +214,16 @@ def upload_to_gerrit(
     Returns:
         A list of CL numbers uploaded.
     """
-    # https://gerrit-review.googlesource.com/Documentation/user-upload.html#reviewers
-    # for more info on the `%` params.
-    option_list = [f"r={x}" for x in reviewers]
-    option_list += (f"cc={x}" for x in cc)
-    if topic is not None:
-        option_list.append(f"topic={topic}")
-    if option_list:
-        trailing_options = "%" + ",".join(option_list)
-    else:
-        trailing_options = ""
-
+    cmd = generate_upload_to_gerrit_cmd(
+        remote,
+        branch,
+        reviewers,
+        cc,
+        ref,
+        topic,
+    )
     run_result = subprocess.run(
-        [
-            "git",
-            "push",
-            remote,
-            f"{ref}:refs/for/{branch}{trailing_options}",
-        ],
+        cmd,
         cwd=git_repo,
         check=False,
         stdin=subprocess.DEVNULL,

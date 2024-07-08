@@ -21,6 +21,11 @@ TOOLCHAIN_UTILS_PYBIN = TOOLCHAIN_UTILS / "py" / "bin"
 
 CHROOT_SOURCE_ROOT = Path("/mnt") / "host" / "source"
 
+DEFAULT_PATCHES_PATH = (
+    CHROMIUMOS_OVERLAY / "sys-devel" / "llvm" / "files" / "PATCHES.json"
+)
+
+
 # Don't bind absolute paths to variables; functions are easier to mock.
 #
 # Functions that perform filesystem ops have results cached, since doing so is
