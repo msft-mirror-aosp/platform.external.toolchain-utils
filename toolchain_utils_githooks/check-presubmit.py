@@ -897,7 +897,7 @@ def is_in_chroot() -> bool:
 
 
 def maybe_reexec_inside_chroot(
-    autofix: bool, install_deps_only: bool, files: List[str]
+    autofix: bool, install_deps_only: bool, infer_files: bool, files: List[str]
 ) -> None:
     if is_in_chroot():
         return
@@ -947,6 +947,8 @@ def maybe_reexec_inside_chroot(
         args.append("--no_autofix")
     if install_deps_only:
         args.append("--install_deps_only")
+    if infer_files:
+        args.append("--infer_files")
     args.extend(rebase_path(x) for x in files)
 
     if chdir_to is None:
@@ -965,6 +967,65 @@ def can_import_py_module(module: str) -> bool:
         stderr=subprocess.DEVNULL,
     )
     return exit_code == 0
+
+
+def infer_files_from_env_or_die(toolchain_utils_root: Path) -> List[str]:
+    env = os.environ
+
+    # If we have PRESUBMIT_FILES, use those. It's a newline-delimeted list.
+    if presubmit_files := env.get("PRESUBMIT_FILES"):
+        return [x.strip() for x in presubmit_files.splitlines()]
+
+    # Otherwise, we're probably executing in the context of a
+    # fullcheckout-presubmit builder. These commit patches locally, then set up
+    # a branch with a properly-init'ed upstream for us. Scrape the diff between
+    # HEAD and that to determine what to lint.
+    upstream = subprocess.run(
+        ["git", "rev-parse", "@{u}"],
+        check=False,
+        cwd=toolchain_utils_root,
+        encoding="utf-8",
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+    )
+    if upstream.returncode:
+        raise ValueError(
+            "No upstream could be parsed for inference - "
+            "make sure you're running on a branch."
+        )
+    upstream_main = upstream.stdout.strip()
+
+    # On builders, merge-base isn't necessary, but in case a dev is running
+    # this locally, this is helpful (e.g., if a dev has `git fetch`ed but not
+    # rebased, we don't want the newly-fetched diffs to show up in the git diff
+    # output).
+    merge_base = subprocess.run(
+        ["git", "merge-base", "HEAD", upstream_main],
+        check=True,
+        cwd=toolchain_utils_root,
+        encoding="utf-8",
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+    ).stdout.strip()
+
+    diff = subprocess.run(
+        ["git", "diff", merge_base],
+        check=True,
+        cwd=toolchain_utils_root,
+        encoding="utf-8",
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+    ).stdout.strip()
+    if not diff:
+        raise ValueError(f"There's no diff between HEAD and {merge_base}.")
+
+    # N.B., if files are only deleted (`+++ /dev/null`), this will have no
+    # matches. That's fine.
+    return [
+        os.path.join(toolchain_utils_root, x)
+        for x in re.findall(r"^\+\+\+ b/([^\n]+)$", diff, re.MULTILINE)
+    ]
 
 
 def main(argv: List[str]) -> int:
@@ -989,16 +1050,36 @@ def main(argv: List[str]) -> int:
         being run, and quit. This skips all actual checking.
         """,
     )
+    parser.add_argument(
+        "--infer_files",
+        action="store_true",
+        help="""
+        If passed, the file list will be inferred from git state and the
+        environment. This is mutually exclusive with passing `files`.
+        """,
+    )
     parser.add_argument("files", nargs="*")
     opts = parser.parse_args(argv)
 
-    files = opts.files
     install_deps_only = opts.install_deps_only
-    if not files and not install_deps_only:
-        return 0
+    infer_files = opts.infer_files
+    files = opts.files
 
+    toolchain_utils_root = detect_toolchain_utils_root()
     if opts.enter_chroot:
-        maybe_reexec_inside_chroot(opts.autofix, install_deps_only, files)
+        maybe_reexec_inside_chroot(
+            opts.autofix, install_deps_only, infer_files, files
+        )
+
+    if not install_deps_only:
+        if bool(files) == infer_files:
+            parser.error(
+                "Either `--infer_files` or a list of files must be passed, "
+                "not both."
+            )
+        if infer_files:
+            files = infer_files_from_env_or_die(Path(toolchain_utils_root))
+            print(f"Inferred files to check: {files}")
 
     mypy = maybe_get_or_install_mypy()
     # If you ask for --no_enter_chroot, you're on your own for installing these
@@ -1031,8 +1112,6 @@ def main(argv: List[str]) -> int:
             check_no_compiler_wrapper_changes,
         ),
     ]
-
-    toolchain_utils_root = detect_toolchain_utils_root()
 
     # NOTE: As mentioned above, checks can block on threads they spawn in this
     # pool, so we need at least len(checks)+1 threads to avoid deadlock. Use *2
