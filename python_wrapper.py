@@ -17,8 +17,9 @@ single argument: `sys.argv[1:]`.
 import importlib.util
 import inspect
 import os
-import sys
 from pathlib import Path
+import sys
+from typing import Any, Callable
 
 
 def find_file_to_execute(argv0: str) -> Path:
@@ -35,7 +36,7 @@ def find_file_to_execute(argv0: str) -> Path:
         raise ValueError(
             f"Expected argv0 to be in {prefix} - it's {relative_script_path}"
         )
-    target_script = relative_script_path_str[len(prefix):]
+    target_script = relative_script_path_str[len(prefix) :]
     result = toolchain_utils / target_script
     if not result.exists():
         sys.exit(f"No script found at {target_script} - can't execute")
@@ -49,8 +50,12 @@ def main():
         module_name,
         main_file,
     )
+    if not spec:
+        raise ValueError(f"Could not retrieve spec from module {module_name}")
     main_module = importlib.util.module_from_spec(spec)
     sys.modules[module_name] = main_module
+    if not spec.loader:
+        raise ValueError(f"Spec for {module_name} does not have a loader")
     spec.loader.exec_module(main_module)
 
     # We have various `main` conventions to support here, unfortunately:
@@ -66,19 +71,22 @@ def main():
         "_main",
         "_Main",
     )
+    main_fn: Callable[..., Any]
     for f in main_fns:
-        if main := getattr(main_module, f, None):
+        if my_fn := getattr(main_module, f, None):
+            main_fn = my_fn
             break
     else:
         sys.exit(
             f"No function called any of {main_fns} declared in {main_file}."
         )
-    if inspect.signature(main).parameters:
-        result = main(sys.argv[1:])
+    if inspect.signature(main_fn).parameters:
+        result = main_fn(sys.argv[1:])
     else:
-        result = main()
+        result = main_fn()
     if result:
         sys.exit(result)
+
 
 if __name__ == "__main__":
     main()
