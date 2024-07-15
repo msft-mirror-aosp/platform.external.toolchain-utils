@@ -599,14 +599,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "-c",
         "--chromiumos-root",
-        help="""Path to the chromiumos source tree root.
+        help="""
+        Path to the chromiumos source tree root.
         Tries to autodetect if not passed.
         """,
     )
     parser.add_argument(
         "-l",
         "--llvm",
-        help="""Path to the llvm dir.
+        help="""
+        Path to the llvm dir.
         Tries to autodetect from chromiumos root if not passed.
         """,
     )
@@ -614,14 +616,14 @@ def parse_args() -> argparse.Namespace:
         "-s",
         "--start-ref",
         default="HEAD",
-        help="""The starting ref for which to apply patches.
-        """,
+        help="The starting ref for which to apply patches.",
     )
     parser.add_argument(
         "-p",
         "--platform",
         action="append",
-        help="""Apply this patch to the give platform. Common options include
+        help="""
+        Apply this patch to the give platform. Common options include
         'chromiumos' and 'android'. Can be specified multiple times to
         apply to multiple platforms. If not passed, platform is set to
         'chromiumos'.
@@ -641,7 +643,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "ref_or_pr_num",
         nargs="+",
-        help="""Git ref or GitHub PR number to make patches.
+        help="""
+        Git ref or GitHub PR number to make patches.
         To patch a GitHub PR, use the syntax p:NNNN (e.g. 'p:123456').
         """,
         type=str,
