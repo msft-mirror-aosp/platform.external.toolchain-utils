@@ -566,6 +566,7 @@ def _git_format_patch(git_dir: Path, ref: str) -> str:
 
 def validate_patch_args(
     positional_args: List[str],
+    llvm_project: Path,
 ) -> List[Union[LLVMGitRef, LLVMPullRequest]]:
     """Checks that each ref_or_pr_num is in a valid format."""
     patch_sources = []
@@ -582,8 +583,15 @@ def validate_patch_args(
             logging.info("Patching remote GitHub PR '%s'", pull_request_num)
             patch_source = LLVMPullRequest(pull_request_num)
         else:
-            logging.info("Patching local ref '%s'", arg)
-            patch_source = LLVMGitRef(arg)
+            if git_utils.is_full_git_sha(arg):
+                logging.info("Patching local ref '%s'", arg)
+                full_sha = arg
+            else:
+                full_sha = git_utils.resolve_ref(llvm_project, arg)
+                logging.info(
+                    "Patching local ref '%s' (expands to %s)", arg, full_sha
+                )
+            patch_source = LLVMGitRef(full_sha)
         patch_sources.append(patch_source)
     return patch_sources
 
@@ -657,7 +665,6 @@ def parse_args() -> argparse.Namespace:
         level=logging.DEBUG if args.verbose else logging.INFO,
     )
 
-    args.patch_sources = validate_patch_args(args.ref_or_pr_num)
     if args.chromiumos_root:
         if not _has_repo_child(args.chromiumos_root):
             parser.error("chromiumos root directly passed but has no .repo")
@@ -679,6 +686,8 @@ def parse_args() -> argparse.Namespace:
                 "Could not autodetect llvm-project dir. Use '-l' to pass the "
                 "llvm-project directly"
             )
+
+    args.patch_sources = validate_patch_args(args.ref_or_pr_num, args.llvm)
     return args
 
 
