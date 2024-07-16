@@ -69,4 +69,5 @@ def set_up_cros_dir(llvm_src_dir: Path) -> None:
     """Create and init the llvm-project/cros directory."""
     cros_dir = llvm_src_dir / "cros"
     cros_dir.mkdir()
-    cros_dir.write_text(CROS_DIR_README)
+    readme = cros_dir / "README.md"
+    readme.write_text(CROS_DIR_README)
