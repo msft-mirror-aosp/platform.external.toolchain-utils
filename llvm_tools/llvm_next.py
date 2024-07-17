@@ -28,6 +28,5 @@ LLVM_NEXT_TESTING_CLS: Iterable[cros_cls.ChangeListURL] = (
     for url in (
         "https://chrome-internal-review.googlesource.com/c/chromeos/manifest-internal/+/7201537/2",
         "https://chromium-review.googlesource.com/c/chromiumos/overlays/chromiumos-overlay/+/5527297/1",
-        "https://chromium-review.googlesource.com/c/chromiumos/overlays/chromiumos-overlay/+/5527298/5",
     )
 )
