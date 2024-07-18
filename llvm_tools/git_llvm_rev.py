@@ -12,7 +12,6 @@ import argparse
 from pathlib import Path
 import re
 import subprocess
-import sys
 from typing import IO, Iterable, List, NamedTuple, Optional, Tuple, Union
 
 
@@ -345,7 +344,7 @@ def translate_rev_to_sha_from_baseline(
             )
         if child_rev < want_rev:
             raise ValueError(
-                "Revision {want_rev} is past "
+                f"Revision {want_rev} is past "
                 f"{llvm_config.remote}/{branch_name}. Try updating your tree?"
             )
         baseline_git_sha = child_sha

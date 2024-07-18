@@ -29,7 +29,7 @@ from typing import List
 
 from cros_utils import cros_paths
 from cros_utils import git_utils
-from llvm_tools import get_llvm_hash
+from llvm_tools import git_llvm_rev
 from llvm_tools import llvm_project_base_commit
 from llvm_tools import patch_utils
 
@@ -37,7 +37,10 @@ from llvm_tools import patch_utils
 def _switch_branch(
     llvm_src_dir: Path, svn_revision: int, branch_number: int = 1
 ) -> str:
-    start_sha = get_llvm_hash.GetGitHashFrom(llvm_src_dir, svn_revision)
+    start_sha = git_llvm_rev.translate_rev_to_sha(
+        git_llvm_rev.LLVMConfig(git_utils.CROS_EXTERNAL_REMOTE, llvm_src_dir),
+        git_llvm_rev.Rev(git_utils.CROS_MAIN_BRANCH, svn_revision),
+    )
     branch_name = f"chromeos/llvm-r{svn_revision}-{branch_number}"
     cmd = [
         "git",
