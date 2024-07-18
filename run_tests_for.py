@@ -24,6 +24,7 @@ import subprocess
 import sys
 from typing import Optional, Tuple
 
+
 TestSpec = collections.namedtuple("TestSpec", ["directory", "command"])
 
 
@@ -160,7 +161,7 @@ def _find_go_tests(test_paths):
     dirs_with_gofiles = set(
         os.path.dirname(p) for p in test_paths if p.endswith(".go")
     )
-    command = ["go", "test", "-vet=all"]
+    command = ("go", "test", "-vet=all")
     # Note: We sort the directories to be deterministic.
     return [
         TestSpec(directory=d, command=command)
