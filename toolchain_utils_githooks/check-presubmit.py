@@ -58,6 +58,14 @@ CheckResult = NamedTuple(
 Command = Sequence[Union[str, os.PathLike]]
 CheckResults = Union[List[Tuple[str, CheckResult]], CheckResult]
 
+# Environment variable that's set to a nonempty value on bots. Used for
+# skipping some tasks on CI. Other presubmit checks detect whether a bot is
+# running the check in a similar way.
+SWARMING_TASK_ID_ENV = "SWARMING_TASK_ID"
+
+# Environment variables to forward to the `cros_sdk` invocation, if we're
+# re-execing in the chroot.
+CHROOT_FORWARDED_ENV = (SWARMING_TASK_ID_ENV,)
 
 # The files and directories on which we run the mypy typechecker. The paths are
 # relative to the root of the toolchain-utils repository.
@@ -727,18 +735,30 @@ def check_go_format(toolchain_utils_root, _thread_pool, files):
     )
 
 
+def is_running_on_bot() -> bool:
+    """Returns True if this script is executing on a bot."""
+    return bool(os.environ.get(SWARMING_TASK_ID_ENV))
+
+
 def check_no_compiler_wrapper_changes(
     toolchain_utils_root: str,
     _thread_pool: multiprocessing.pool.ThreadPool,
     files: Iterable[str],
 ) -> CheckResult:
+    if is_running_on_bot():
+        return CheckResult(
+            ok=True,
+            output="Skipping compiler_wrapper change detection on bot",
+            autofix_commands=[],
+        )
+
     compiler_wrapper_prefix = (
         os.path.join(toolchain_utils_root, "compiler_wrapper") + "/"
     )
     if not any(x.startswith(compiler_wrapper_prefix) for x in files):
         return CheckResult(
             ok=True,
-            output="no compiler_wrapper changes detected",
+            output="No compiler_wrapper changes detected",
             autofix_commands=[],
         )
 
@@ -939,6 +959,14 @@ def maybe_reexec_inside_chroot(
     args = [
         "cros_sdk",
         "--enter",
+    ]
+
+    for env_var in CHROOT_FORWARDED_ENV:
+        val = os.environ.get(env_var)
+        if val is not None:
+            args.append(f"{env_var}={val}")
+
+    args += [
         "--",
         rebase_path(__file__),
     ]
