@@ -181,7 +181,9 @@ def main(sys_argv: List[str]) -> None:
     )
     logging.info("Created and switched to branch %s", branch_name)
     llvm_project_base_commit.make_base_commit(
-        args.chromiumos_root / cros_paths.TOOLCHAIN_UTILS, args.llvm_dir
+        args.chromiumos_root / cros_paths.TOOLCHAIN_UTILS,
+        args.llvm_dir,
+        ebuild_dir=args.chromiumos_root / cros_paths.DEFAULT_LLVM_PKG_PATH,
     )
     logging.info("Committed base commit")
     _apply_patches_locally(

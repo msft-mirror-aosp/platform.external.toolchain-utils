@@ -8,7 +8,6 @@ import argparse
 import dataclasses
 import logging
 from pathlib import Path
-import re
 import shlex
 import subprocess
 from typing import Iterable, List, Optional, Union
@@ -16,6 +15,7 @@ from typing import Iterable, List, Optional, Union
 from cros_utils import cros_paths
 from llvm_tools import cros_llvm_repo
 from llvm_tools import git_llvm_rev
+from llvm_tools import llvm_project_base_commit
 
 
 @dataclasses.dataclass(frozen=True)
@@ -50,55 +50,6 @@ def apply_patches(
         check=True,
         stdin=subprocess.DEVNULL,
     )
-
-
-def find_ebuild_in_dir(ebuild_dir: Path) -> Path:
-    """Returns the path to a 9999 ebuild in `ebuild_dir`; raises if none."""
-    candidates = list(ebuild_dir.glob("*-9999.ebuild"))
-    if len(candidates) != 1:
-        raise ValueError(
-            f"Expected exactly one 9999 ebuild in {ebuild_dir}; found "
-            f"{candidates}"
-        )
-    return candidates[0]
-
-
-def write_gentoo_cmake_hack(llvm_dir: LLVMSourceDir, ebuild_dir: Path) -> None:
-    """Modifies cmake files in LLVM so cmake.eclass doesn't modify them."""
-    # Upstream's `cmake.eclass` will try to override "dangerous" configurations
-    # that override Gentoo settings. There's no way to skip this override, but
-    # it _does_ have logic to detect if it has already run & skips all
-    # modifications in that case. Since LLVM has no such "dangerous" settings,
-    # and the `9999` ebuild never "goes live," it's safe to skip these.
-
-    # The file to modify is the 'main' cmake file, which is determined based on
-    # `CMAKE_USE_DIR`. Parsing that out isn't _too_ painful, so try it.
-    ebuild_path = find_ebuild_in_dir(ebuild_dir)
-    ebuild_contents = ebuild_path.read_text(encoding="utf-8")
-    cmake_use_dir_re = re.compile(
-        # Use string concatenation rather than re.VERBOSE, since this regex
-        # goes in an error message on failure, and that's _really_ hard to
-        # read.
-        r"^\s*"
-        # While these all use `export`, it's not strictly required by
-        # cmake.eclass.
-        r"(?:export\s+)?" r'CMAKE_USE_DIR="\$\{S\}/([^"]+)"',
-        re.MULTILINE,
-    )
-    cmake_use_dirs = cmake_use_dir_re.findall(ebuild_contents)
-    if len(cmake_use_dirs) != 1:
-        raise ValueError(
-            f"Expected to find 1 match of {cmake_use_dir_re} in "
-            f"{ebuild_path}; found {len(cmake_use_dirs)}"
-        )
-
-    cmake_file = llvm_dir.path / cmake_use_dirs[0] / "CMakeLists.txt"
-    special_marker = "<<< Gentoo configuration >>>"
-    if special_marker in cmake_file.read_text(encoding="utf-8"):
-        return
-
-    with cmake_file.open("a", encoding="utf-8") as f:
-        f.write(f"\n# HACK from setup_from_workon.py:\n# {special_marker}")
 
 
 def write_patch_application_stamp(
@@ -318,7 +269,9 @@ def main(argv: List[str]) -> None:
     _, package_name = package.split("/")
     write_patch_application_stamp(opts.llvm_dir, package_name)
     logging.info("Applying Gentoo CMakeLists.txt hack...")
-    write_gentoo_cmake_hack(opts.llvm_dir, ebuild_dir)
+    llvm_project_base_commit.write_gentoo_cmake_hack(
+        opts.llvm_dir.path, ebuild_dir
+    )
 
     if opts.commit:
         subprocess.run(

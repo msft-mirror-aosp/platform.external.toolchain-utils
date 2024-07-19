@@ -4,6 +4,7 @@
 
 """Tests for verify_patch_consistency."""
 
+import dataclasses
 import json
 from pathlib import Path
 import subprocess
@@ -87,6 +88,16 @@ GERRIT_JSON_FIXTURE = """\
   }
 ]
 """
+
+
+@dataclasses.dataclass(frozen=True)
+class _RunnerArgs:
+    main_sha: str
+    patch_branch: str
+    toolchain_utils_dir: Path
+    llvm_src_dir: Path
+    patches_json: Path
+    llvm_pkg_dir: Path
 
 
 class TestVerifyPatchConsistency(test_helpers.TempDirTestCase):
@@ -174,16 +185,36 @@ class TestVerifyPatchConsistency(test_helpers.TempDirTestCase):
         """Set up for full verification tests."""
 
         # Set up directories and paths.
+        # Current layout is:
+        #
+        #   toolchain-utils/
+        #     OWNERS
+        #     OWNERS.toolchain
+        #   sys-devel/llvm/
+        #     llvm-9999.ebuild
+        #   llvm-project/
+        #   PATCHES.json
+        #   patch.patch
+        #
         fake_toolchain_utils = tempdir / "toolchain-utils"
         fake_toolchain_utils.mkdir()
         (fake_toolchain_utils / "OWNERS").touch()
         (fake_toolchain_utils / "OWNERS.toolchain").touch()
         fake_patches_json_path = tempdir / "PATCHES.json"
+        fake_ebuild_dir = tempdir / "sys-devel" / "llvm"
+        fake_ebuild_dir.mkdir(parents=True)
+        fake_live_ebuild = fake_ebuild_dir / "llvm-9999.ebuild"
+        fake_live_ebuild.write_text(
+            'export CMAKE_USE_DIR="${S}/llvm"\n', encoding="utf-8"
+        )
         patch_name = "patch.patch"
         with fake_patches_json_path.open("w", encoding="utf-8") as f:
             json.dump([{"rel_patch_path": patch_name}], f)
         fake_llvm_src_dir = tempdir / "llvm-project"
         fake_llvm_src_dir.mkdir()
+        cmake_file = fake_llvm_src_dir / "llvm" / "CMakeLists.txt"
+        cmake_file.parent.mkdir()
+        cmake_file.touch()
 
         # Set up git state.
         # There's a lot going on here, but it mostly sets up commits
@@ -219,49 +250,47 @@ class TestVerifyPatchConsistency(test_helpers.TempDirTestCase):
             check=True,
         )
         llvm_project_base_commit.make_base_commit(
-            fake_toolchain_utils, fake_llvm_src_dir
+            fake_toolchain_utils, fake_llvm_src_dir, ebuild_dir=fake_ebuild_dir
         )
-        a_file.write_text("hello world")
+        a_file.write_text("hello world", encoding="utf-8")
         git_utils.commit_all_changes(fake_llvm_src_dir, "Hello world commit")
         diff = git_utils.format_patch(fake_llvm_src_dir, "HEAD")
         subprocess.run(
             ["git", "switch", "-C", "main"], cwd=fake_llvm_src_dir, check=True
         )
-        (tempdir / patch_name).write_text(diff)
+        (tempdir / patch_name).write_text(diff, encoding="utf-8")
         runner(
-            main_sha,
-            patch_branch,
-            fake_toolchain_utils,
-            fake_llvm_src_dir,
-            fake_patches_json_path,
+            _RunnerArgs(
+                main_sha=main_sha,
+                patch_branch=patch_branch,
+                toolchain_utils_dir=fake_toolchain_utils,
+                llvm_src_dir=fake_llvm_src_dir,
+                patches_json=fake_patches_json_path,
+                llvm_pkg_dir=fake_ebuild_dir,
+            )
         )
 
     def test_failed_verification(self):
         """Test we can catch a bad patch stack."""
         tempdir = self.make_tempdir()
 
-        def _runner(
-            main_sha: str,
-            _: str,
-            toolchain_utils_dir: Path,
-            llvm_src_dir: Path,
-            patches_json: Path,
-        ):
+        def _runner(args: _RunnerArgs):
             # Actually run the (failing) verification.
             # This fails because the "upstream" of fetch_head_ref
             # is the same as the translated_sha (which is in
             # the "main" that matches the svn_revision).
             self._set_up_mocking(
-                translate_sha=main_sha, fetch_head_ref=main_sha
+                translate_sha=args.main_sha, fetch_head_ref=args.main_sha
             )
             try:
                 self.assertFalse(
                     verify_patch_consistency.verify_in_worktree(
-                        toolchain_utils_dir=toolchain_utils_dir,
-                        llvm_src_dir=llvm_src_dir,
-                        patches_json=patches_json,
+                        toolchain_utils_dir=args.toolchain_utils_dir,
+                        llvm_src_dir=args.llvm_src_dir,
+                        patches_json=args.patches_json,
+                        llvm_pkg_dir=args.llvm_pkg_dir,
                         svn_revision=1234,
-                        cl_ref=main_sha,
+                        cl_ref=args.main_sha,
                     )
                 )
             finally:
@@ -273,29 +302,24 @@ class TestVerifyPatchConsistency(test_helpers.TempDirTestCase):
         """Test we can successfully verify a patch stack."""
         tempdir = self.make_tempdir()
 
-        def _runner(
-            main_sha: str,
-            patch_branch: str,
-            toolchain_utils_dir: Path,
-            llvm_src_dir: Path,
-            patches_json: Path,
-        ):
+        def _runner(args: _RunnerArgs):
             # Actually run the verification. Notably,
             # the difference here between the fail case is the
             # fetch_head_ref is the patch_branch which acts
             # as our "upstream".
             self._set_up_mocking(
-                translate_sha=main_sha,
-                fetch_head_ref=patch_branch,
+                translate_sha=args.main_sha,
+                fetch_head_ref=args.patch_branch,
             )
             try:
                 self.assertTrue(
                     verify_patch_consistency.verify_in_worktree(
-                        toolchain_utils_dir=toolchain_utils_dir,
-                        llvm_src_dir=llvm_src_dir,
-                        patches_json=patches_json,
+                        toolchain_utils_dir=args.toolchain_utils_dir,
+                        llvm_src_dir=args.llvm_src_dir,
+                        patches_json=args.patches_json,
+                        llvm_pkg_dir=args.llvm_pkg_dir,
                         svn_revision=1234,
-                        cl_ref=patch_branch,
+                        cl_ref=args.patch_branch,
                     )
                 )
             finally:
