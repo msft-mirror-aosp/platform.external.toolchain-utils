@@ -6,6 +6,7 @@
 
 import dataclasses
 import json
+import os
 from pathlib import Path
 import subprocess
 from typing import Callable
@@ -14,6 +15,7 @@ from unittest import mock
 from cros_utils import git_utils
 from llvm_tools import git_llvm_rev
 from llvm_tools import llvm_project_base_commit
+from llvm_tools import patch_utils
 from llvm_tools import test_helpers
 from llvm_tools import verify_patch_consistency
 
@@ -97,7 +99,7 @@ class _RunnerArgs:
     toolchain_utils_dir: Path
     llvm_src_dir: Path
     patches_json: Path
-    llvm_pkg_dir: Path
+    chromiumos_overlay: Path
 
 
 class TestVerifyPatchConsistency(test_helpers.TempDirTestCase):
@@ -201,12 +203,18 @@ class TestVerifyPatchConsistency(test_helpers.TempDirTestCase):
         (fake_toolchain_utils / "OWNERS").touch()
         (fake_toolchain_utils / "OWNERS.toolchain").touch()
         fake_patches_json_path = tempdir / "PATCHES.json"
-        fake_ebuild_dir = tempdir / "sys-devel" / "llvm"
-        fake_ebuild_dir.mkdir(parents=True)
-        fake_live_ebuild = fake_ebuild_dir / "llvm-9999.ebuild"
-        fake_live_ebuild.write_text(
-            'export CMAKE_USE_DIR="${S}/llvm"\n', encoding="utf-8"
-        )
+        fake_chromiumos_overlay = tempdir / "chromiumos-overlay"
+        for p in patch_utils.CHROMEOS_PATCHES_JSON_PACKAGES:
+            package_name = os.path.basename(p)
+            live_ebuild = (
+                fake_chromiumos_overlay / p / f"{package_name}-9999.ebuild"
+            )
+            live_ebuild.parent.mkdir(parents=True)
+            # Always use llvm as the CMAKE_USE_DIR; it's simplest to mock, and
+            # we don't gain meaningful additional coverage by varying it.
+            live_ebuild.write_text(
+                'export CMAKE_USE_DIR="${S}/llvm"\n', encoding="utf-8"
+            )
         patch_name = "patch.patch"
         with fake_patches_json_path.open("w", encoding="utf-8") as f:
             json.dump([{"rel_patch_path": patch_name}], f)
@@ -250,7 +258,9 @@ class TestVerifyPatchConsistency(test_helpers.TempDirTestCase):
             check=True,
         )
         llvm_project_base_commit.make_base_commit(
-            fake_toolchain_utils, fake_llvm_src_dir, ebuild_dir=fake_ebuild_dir
+            fake_toolchain_utils,
+            fake_llvm_src_dir,
+            chromiumos_overlay=fake_chromiumos_overlay,
         )
         a_file.write_text("hello world", encoding="utf-8")
         git_utils.commit_all_changes(fake_llvm_src_dir, "Hello world commit")
@@ -266,7 +276,7 @@ class TestVerifyPatchConsistency(test_helpers.TempDirTestCase):
                 toolchain_utils_dir=fake_toolchain_utils,
                 llvm_src_dir=fake_llvm_src_dir,
                 patches_json=fake_patches_json_path,
-                llvm_pkg_dir=fake_ebuild_dir,
+                chromiumos_overlay=fake_chromiumos_overlay,
             )
         )
 
@@ -288,7 +298,7 @@ class TestVerifyPatchConsistency(test_helpers.TempDirTestCase):
                         toolchain_utils_dir=args.toolchain_utils_dir,
                         llvm_src_dir=args.llvm_src_dir,
                         patches_json=args.patches_json,
-                        llvm_pkg_dir=args.llvm_pkg_dir,
+                        chromiumos_overlay=args.chromiumos_overlay,
                         svn_revision=1234,
                         cl_ref=args.main_sha,
                     )
@@ -317,7 +327,7 @@ class TestVerifyPatchConsistency(test_helpers.TempDirTestCase):
                         toolchain_utils_dir=args.toolchain_utils_dir,
                         llvm_src_dir=args.llvm_src_dir,
                         patches_json=args.patches_json,
-                        llvm_pkg_dir=args.llvm_pkg_dir,
+                        chromiumos_overlay=args.chromiumos_overlay,
                         svn_revision=1234,
                         cl_ref=args.patch_branch,
                     )

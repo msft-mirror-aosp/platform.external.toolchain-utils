@@ -183,7 +183,7 @@ def main(sys_argv: List[str]) -> None:
     llvm_project_base_commit.make_base_commit(
         args.chromiumos_root / cros_paths.TOOLCHAIN_UTILS,
         args.llvm_dir,
-        ebuild_dir=args.chromiumos_root / cros_paths.DEFAULT_LLVM_PKG_PATH,
+        chromiumos_overlay=args.chromiumos_root / cros_paths.CHROMIUMOS_OVERLAY,
     )
     logging.info("Committed base commit")
     _apply_patches_locally(

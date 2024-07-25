@@ -44,7 +44,7 @@ def verify_in_worktree(
     toolchain_utils_dir: Path,
     llvm_src_dir: Path,
     patches_json: Path,
-    llvm_pkg_dir: Path,
+    chromiumos_overlay: Path,
     svn_revision: int,
     cl_ref: str,
 ) -> bool:
@@ -54,7 +54,7 @@ def verify_in_worktree(
         toolchain_utils_dir: Path to toolchain_utils.
         llvm_src_dir: Path to an llvm-project dir.
         patches_json: A PATCHES.json file to apply.
-        llvm_pkg_dir: Path to sys-devel/llvm Portage package dir.
+        chromiumos_overlay: Path to chromiumos-overlay
         svn_revision: The synthetic SVN-style revision number to
             determine which patches apply.
         cl_ref: Upstream Change List reference name.
@@ -79,7 +79,7 @@ def verify_in_worktree(
         llvm_project_base_commit.make_base_commit(
             toolchain_utils_dir,
             worktree_dir,
-            ebuild_dir=llvm_pkg_dir,
+            chromiumos_overlay,
         )
         patch_utils.apply_all_from_json(
             svn_version=svn_revision,
@@ -256,7 +256,7 @@ def main(argv: List[str]) -> int:
         toolchain_utils_dir=args.chromiumos_root / cros_paths.TOOLCHAIN_UTILS,
         llvm_src_dir=args.llvm_dir,
         patches_json=args.patch_file,
-        llvm_pkg_dir=args.chromiumos_root / cros_paths.DEFAULT_LLVM_PKG_PATH,
+        chromiumos_overlay=args.chromiumos_root / cros_paths.CHROMIUMOS_OVERLAY,
         svn_revision=svn_revision,
         cl_ref=cl_ref,
     ):

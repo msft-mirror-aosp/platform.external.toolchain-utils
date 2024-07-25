@@ -269,8 +269,9 @@ def main(argv: List[str]) -> None:
     _, package_name = package.split("/")
     write_patch_application_stamp(opts.llvm_dir, package_name)
     logging.info("Applying Gentoo CMakeLists.txt hack...")
-    llvm_project_base_commit.write_gentoo_cmake_hack(
-        opts.llvm_dir.path, ebuild_dir
+    llvm_project_base_commit.write_all_gentoo_cmake_hacks(
+        opts.llvm_dir.path,
+        chromiumos_overlay=cros_root / cros_paths.CHROMIUMOS_OVERLAY,
     )
 
     if opts.commit:

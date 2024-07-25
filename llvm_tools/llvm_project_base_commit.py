@@ -12,6 +12,7 @@ import re
 import shutil
 
 from cros_utils import git_utils
+from llvm_tools import patch_utils
 
 
 # This isn't a dict to prevent adding a tomli-w dependency.
@@ -53,7 +54,7 @@ TEST=CQ
 
 
 def make_base_commit(
-    toolchain_utils_dir: Path, llvm_src_dir: Path, ebuild_dir: Path
+    toolchain_utils_dir: Path, llvm_src_dir: Path, chromiumos_overlay: Path
 ) -> None:
     """Create a commit which represents the base of a ChromeOS branch."""
 
@@ -64,7 +65,7 @@ def make_base_commit(
     for copy_file in toolchain_utils_copy_files:
         shutil.copy(toolchain_utils_dir / copy_file, llvm_src_dir / copy_file)
     (llvm_src_dir / "PRESUBMIT.cfg").write_text(PRESUBMIT_CFG_CONTENTS)
-    write_gentoo_cmake_hack(llvm_src_dir, ebuild_dir)
+    write_all_gentoo_cmake_hacks(llvm_src_dir, chromiumos_overlay)
     set_up_cros_dir(llvm_src_dir)
     git_utils.commit_all_changes(llvm_src_dir, BASE_COMMIT_MESSAGE)
 
@@ -120,6 +121,17 @@ def write_gentoo_cmake_hack(llvm_src_dir: Path, ebuild_dir: Path) -> None:
         f.write(
             f"\n# HACK from llvm_project_base_commit.py:\n# {special_marker}"
         )
+
+
+def write_all_gentoo_cmake_hacks(
+    llvm_src_dir: Path, chromiumos_overlay: Path
+) -> None:
+    """Writes gentoo cmake hacks for all known LLVM 9999 subprojects."""
+    for subproject in patch_utils.CHROMEOS_PATCHES_JSON_PACKAGES:
+        # N.B., this function will do nothing if the cmake file it aims to
+        # modify has the marker already. Hence, calling it unconditionally on
+        # all projects is fine.
+        write_gentoo_cmake_hack(llvm_src_dir, chromiumos_overlay / subproject)
 
 
 def _find_ebuild_in_dir(ebuild_dir: Path) -> Path:
