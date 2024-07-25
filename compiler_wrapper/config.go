@@ -110,7 +110,6 @@ func crosCommonClangFlags() []string {
 		"-Wno-enum-constexpr-conversion",
 		"-Wno-error=implicit-function-declaration",
 		"-Wno-error=implicit-int",
-		"-Wno-single-bit-bitfield-constant-conversion",
 		"-Wno-unknown-warning-option",
 		"-fdebug-default-version=5",
 		"-Wno-int-conversion",
