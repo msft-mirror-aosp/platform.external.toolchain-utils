@@ -335,4 +335,4 @@ class TestVerifyPatchConsistency(test_helpers.TempDirTestCase):
             finally:
                 self._stop_mocking()
 
-            self._run_llvm_harness(tempdir, _runner)
+        self._run_llvm_harness(tempdir, _runner)
