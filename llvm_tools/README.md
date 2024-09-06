@@ -186,10 +186,6 @@ $ ./patch_manager.py \
 
 TODO(ryanbeltran): Please write some docs here.
 
-### `llvm_local_bisection.sh`
-
-TODO(ajordanr): Please write some docs here.
-
 ## Other Helpful Scripts
 
 ### `get_llvm_hash.py`
