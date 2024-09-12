@@ -246,6 +246,36 @@ def write_unified_cmake_file(
     )
 
 
+def patch_absl(absl_dir: Path):
+    """Patches absl's sources."""
+    # b/366159701#comment7: the current absl has a bug in its cmake files. This
+    # is fixed by cl/675148126. Since the diff is a single line, patch it
+    # directly.
+    #
+    # If you've upgraded absl, this patching logic can probably be safely
+    # removed.
+    patch_text = textwrap.dedent(
+        """\
+        --- a/absl/base/CMakeLists.txt
+        +++ b/absl/base/CMakeLists.txt
+        @@ -534,6 +534,7 @@ absl_cc_test(
+             absl::no_destructor
+             absl::config
+             absl::raw_logging_internal
+        +    GTest::gmock
+             GTest::gtest_main
+         )
+        """
+    )
+    subprocess.run(
+        ["patch", "-p1"],
+        check=True,
+        cwd=absl_dir,
+        encoding="utf-8",
+        input=patch_text,
+    )
+
+
 def fetch_workloads_into(target_dir: Path):
     """Fetches PGO generation workloads into `target_dir`."""
     # The workload here is absl and gtest. The reasoning behind that selection
@@ -278,18 +308,20 @@ def fetch_workloads_into(target_dir: Path):
     absl_dir = target_dir / "absl"
     fetch_and_extract(
         gs_url="gs://chromeos-localmirror/distfiles/"
-        "abseil-cpp-a86bb8a97e38bc1361289a786410c0eb5824099c.tar.bz2",
+        "abseil-cpp-20240722.0.tar.gz",
         into_dir=absl_dir,
     )
+
+    unpacked_absl_dir = read_exactly_one_dirent(absl_dir)
+    patch_absl(unpacked_absl_dir)
 
     gtest_dir = target_dir / "gtest"
     fetch_and_extract(
         gs_url="gs://chromeos-mirror/gentoo/distfiles/"
-        "gtest-1b18723e874b256c1e39378c6774a90701d70f7a.tar.gz",
+        "gtest-1.14.0_p20220421.tar.gz",
         into_dir=gtest_dir,
     )
 
-    unpacked_absl_dir = read_exactly_one_dirent(absl_dir)
     unpacked_gtest_dir = read_exactly_one_dirent(gtest_dir)
     write_unified_cmake_file(
         into_dir=target_dir,
