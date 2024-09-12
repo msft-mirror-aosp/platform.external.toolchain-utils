@@ -107,7 +107,6 @@ func crosCommonClangFlags() []string {
 		"-Qunused-arguments",
 		"-Werror=poison-system-directories",
 		"-Wno-deprecated-declarations",
-		"-Wno-enum-constexpr-conversion",
 		"-Wno-error=implicit-function-declaration",
 		"-Wno-error=implicit-int",
 		"-Wno-unknown-warning-option",
