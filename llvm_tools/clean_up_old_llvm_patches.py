@@ -112,6 +112,8 @@ def find_android_llvm_version(android_toolchain_tree: Path) -> int:
         android_toolchain_tree
         / "toolchain"
         / "llvm_android"
+        / "src"
+        / "llvm_android"
         / "android_version.py"
     )
 

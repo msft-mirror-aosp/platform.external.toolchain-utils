@@ -20,7 +20,12 @@ class Test(test_helpers.TempDirTestCase):
     def test_android_version_autodetection(self):
         android_root = self.make_tempdir()
         android_version_py = (
-            android_root / "toolchain" / "llvm_android" / "android_version.py"
+            android_root
+            / "toolchain"
+            / "llvm_android"
+            / "src"
+            / "llvm_android"
+            / "android_version.py"
         )
         android_version_py.parent.mkdir(parents=True)
         android_version_py.write_text(
