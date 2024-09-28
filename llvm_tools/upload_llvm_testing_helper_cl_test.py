@@ -4,8 +4,6 @@
 
 """Tests for upload_llvm_testing_helper_cl"""
 
-import unittest
-
 from llvm_tools import patch_utils
 from llvm_tools import test_helpers
 from llvm_tools import upload_llvm_testing_helper_cl

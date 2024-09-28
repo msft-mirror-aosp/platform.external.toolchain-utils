@@ -4,8 +4,6 @@
 
 """Tests for clean_up_old_llvm_patches"""
 
-import unittest
-
 from llvm_tools import clean_up_old_llvm_patches
 from llvm_tools import test_helpers
 

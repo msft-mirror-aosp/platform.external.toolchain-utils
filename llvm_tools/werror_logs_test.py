@@ -10,7 +10,6 @@ import os
 import subprocess
 import textwrap
 from typing import Dict
-import unittest
 from unittest import mock
 
 from llvm_tools import test_helpers

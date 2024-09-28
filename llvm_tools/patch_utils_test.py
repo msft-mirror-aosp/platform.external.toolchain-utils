@@ -9,7 +9,6 @@ import io
 import json
 from pathlib import Path
 import subprocess
-import unittest
 from unittest import mock
 
 from llvm_tools import patch_utils as pu
@@ -227,7 +226,7 @@ Hunk #1 SUCCEEDED at 96 with fuzz 1.
         self.assertTrue(pu.is_git_dirty(dirpath))
 
     @mock.patch.object(pu, "git_clean_context")
-    def test_update_version_ranges(self, mock_git_clean_context):
+    def test_update_version_ranges(self, _mock_git_clean_context):
         """Test the UpdateVersionRanges function."""
         dirpath = self.make_tempdir()
         patches = [

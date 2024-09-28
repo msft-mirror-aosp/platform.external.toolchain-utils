@@ -8,8 +8,8 @@ import textwrap
 import unittest
 from unittest import mock
 
-from llvm_tools import check_clang_diags
 from cros_utils import bugs
+from llvm_tools import check_clang_diags
 
 
 # pylint: disable=protected-access
