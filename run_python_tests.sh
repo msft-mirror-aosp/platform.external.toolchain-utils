@@ -19,6 +19,11 @@ fi
 # single script to run is specified, `pytest` will invoke it in a way that
 # breaks toolchain-utils module importing.
 #
+# `-p no:hypothesispytest` is added because some chroots come with a
+# 'hypothesis' pytest extension, which allows for property testing. We
+# don't use that, and it autocreates a `.hypothesis/` subdir, which is
+# slightly annoying.
+#
 # Exemptions:
 # - git_llvm_rev_test is ignored because it takes a while. It'd be nice to
 #   optionally enable it, but it's realistically very unlikely to break.
@@ -27,6 +32,7 @@ fi
 # - py/ just has symlinks to stuff back in toolchain-utils; no point in
 #   checking that.
 PYTHONPATH="${PWD}:${PYTHONPATH:-}" pytest \
+  -p no:hypothesispytest \
   --ignore=debug_info_test/debug_info_test.py \
   --ignore=llvm_tools/llvm-project-copy \
   --ignore=llvm_tools/git_llvm_rev_test.py \
