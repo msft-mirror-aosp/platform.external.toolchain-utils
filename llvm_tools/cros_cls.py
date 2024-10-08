@@ -114,12 +114,17 @@ class ChangeListURL:
             raise ValueError("A patchset number must be specified.")
         return result
 
-    def crrev_url_without_http(self):
+    def crrev_url_without_http(self) -> str:
         namespace = "i" if self.internal else "c"
         result = f"crrev.com/{namespace}/{self.cl_id}"
         if self.patch_set is not None:
             result += f"/{self.patch_set}"
         return result
+
+    @property
+    def gerrit_tool_id(self) -> str:
+        """Returns an identifier for this CL for use with the 'gerrit' tool."""
+        return f"*{self.cl_id}" if self.internal else f"{self.cl_id}"
 
     def __str__(self):
         return f"https://{self.crrev_url_without_http()}"
