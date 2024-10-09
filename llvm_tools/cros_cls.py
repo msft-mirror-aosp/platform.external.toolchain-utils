@@ -67,26 +67,28 @@ class ChangeListURL:
     patch_set: Optional[int] = None
     internal: bool = False
 
+    _URL_PARSE_RE = re.compile(
+        # Match an optional https:// header.
+        r"(?:https?://)?"
+        # Leaving the CL number and patch set as the next parts, match either
+        # crrev...
+        r"(crrev\.com/[ci]/"
+        # ...or chromium-review URLs. Note that chromium-review can either be
+        # served by googlesource or git.corp.google hosts.
+        r"|(?:chromium|chrome-internal)-review\."
+        r"(?:git\.corp\.google|googlesource)\.com/.*/\+/)"
+        # Match the CL number...
+        r"(\d+)"
+        # and (optionally) the patch-set, as well as consuming any of the
+        # path after the patch-set.
+        r"(?:/(\d+)?(?:/.*)?)?"
+        # Validate any sort of GET params for completeness.
+        r"(?:$|[?&].*)"
+    )
+
     @classmethod
     def parse(cls, url: str) -> "ChangeListURL":
-        url_re = re.compile(
-            # Match an optional https:// header.
-            r"(?:https?://)?"
-            # Match either chromium-review or crrev, leaving the CL number and
-            # patch set as the next parts. These can be parsed in unison.
-            r"(chromium-review\.googlesource\.com.*/\+/"
-            r"|crrev\.com/[ci]/"
-            r"|chrome-internal-review\.googlesource\.com.*/\+/)"
-            # Match the CL number...
-            r"(\d+)"
-            # and (optionally) the patch-set, as well as consuming any of the
-            # path after the patch-set.
-            r"(?:/(\d+)?(?:/.*)?)?"
-            # Validate any sort of GET params for completeness.
-            r"(?:$|[?&].*)"
-        )
-
-        m = url_re.fullmatch(url)
+        m = cls._URL_PARSE_RE.fullmatch(url)
         if not m:
             raise ValueError(
                 f"URL {url!r} was not recognized. Supported URL formats are "
