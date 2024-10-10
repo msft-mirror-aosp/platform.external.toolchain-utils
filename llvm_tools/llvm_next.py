@@ -9,8 +9,8 @@ from typing import Iterable
 from llvm_tools import cros_cls
 
 
-LLVM_NEXT_HASH = "3b5e7c83a6e226d5bd7ed2e9b67449b64812074c"
-LLVM_NEXT_REV = 530567
+LLVM_NEXT_HASH = "f142f8afe21bceb00fb495468aa0b5043e98c419"
+LLVM_NEXT_REV = 547379
 
 # NOTE: Always specify patch-sets for CLs. We don't want uploads by untrusted
 # users to turn into bot invocations w/ untrusted input.
@@ -26,7 +26,7 @@ LLVM_NEXT_REV = 530567
 LLVM_NEXT_TESTING_CLS: Iterable[cros_cls.ChangeListURL] = (
     cros_cls.ChangeListURL.parse(url)
     for url in (
-        "https://chrome-internal-review.googlesource.com/c/chromeos/manifest-internal/+/7201537/6",
-        "https://chromium-review.googlesource.com/c/chromiumos/overlays/chromiumos-overlay/+/5527297/3",
+        "https://chrome-internal-review.googlesource.com/c/chromeos/manifest-internal/+/7721626/1",
+        "https://chromium-review.googlesource.com/c/chromiumos/overlays/chromiumos-overlay/+/5924684/1",
     )
 )
