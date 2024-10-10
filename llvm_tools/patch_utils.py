@@ -347,7 +347,13 @@ def _git_am_chromiumos_internal(
     extra_args: Optional[List[Union[str, Path]]],
     quiet: bool = False,
 ) -> PatchResult:
-    cmd: List[Union[str, Path]] = ["git", "am", "--3way", patch_path]
+    cmd: List[Union[str, Path]] = [
+        "git",
+        "am",
+        "--3way",
+        "--keep-non-patch",
+        patch_path,
+    ]
     if extra_args:
         cmd += extra_args
     try:
