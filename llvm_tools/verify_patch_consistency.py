@@ -69,8 +69,11 @@ def verify_in_worktree(
         remote=git_utils.CROS_EXTERNAL_REMOTE,
         branch=git_utils.CROS_MAIN_BRANCH,
     )
+    # The cros external remote ("cros") uses its main branch
+    # for the actual upstream revision, not the local chromeos main branch.
+    # This is the same as the upstream/main.
     matching_hash = git_llvm_rev.translate_rev_to_sha(
-        git_llvm_rev.LLVMConfig("origin", llvm_src_dir),
+        git_llvm_rev.LLVMConfig(git_utils.CROS_EXTERNAL_REMOTE, llvm_src_dir),
         git_llvm_rev.Rev(git_llvm_rev.MAIN_BRANCH, svn_revision),
     )
     with git_utils.create_worktree(
@@ -81,12 +84,20 @@ def verify_in_worktree(
             worktree_dir,
             chromiumos_overlay,
         )
-        patch_utils.apply_all_from_json(
-            svn_version=svn_revision,
-            llvm_src_dir=worktree_dir,
-            patches_json_fp=patches_json,
-            patch_cmd=patch_utils.git_am_chromiumos_quiet,
-        )
+        try:
+            patch_utils.apply_all_from_json(
+                svn_version=svn_revision,
+                llvm_src_dir=worktree_dir,
+                patches_json_fp=patches_json,
+                patch_cmd=patch_utils.git_am_chromiumos_quiet,
+            )
+        except RuntimeError:
+            apply_msg = (
+                "FAILED TO VERIFY. Local patches did not apply.",
+                "Make sure your PATCHES.json file is up to date.",
+            )
+            print("\n".join(apply_msg), file=sys.stderr)
+            raise
         # We have to fetch again inside the worktree for the CL itself.
         git_utils.fetch(
             worktree_dir,
@@ -97,14 +108,14 @@ def verify_in_worktree(
         if diff:
             local_head = git_utils.resolve_ref(worktree_dir, "HEAD")
             fetch_head = git_utils.resolve_ref(worktree_dir, "FETCH_HEAD")
-            msg = (
+            diff_msg = (
                 f"FAILED TO VERIFY. Local patches and CL {cl_ref} differ!",
                 f"Comparing local HEAD {local_head} with"
                 f" FETCH_HEAD {fetch_head}",
                 "",
                 diff,
             )
-            print("\n".join(msg), file=sys.stderr)
+            print("\n".join(diff_msg), file=sys.stderr)
             return False
     return True
 
