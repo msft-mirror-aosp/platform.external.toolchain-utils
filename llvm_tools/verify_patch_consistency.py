@@ -169,16 +169,17 @@ def parse_branch(cl: int, chromiumos_root: Path) -> Tuple[int, str]:
 
 def _verified_message(svn_revision: int, cl: str, cl_ref: str) -> str:
     """Format the 'verified' message body and return it."""
-    gerrit_cmd_template = "gerrit %s $(gerrit --raw --no-pager deps '%s') 2"
-    gerrit_approve_cmd = gerrit_cmd_template % ("label-cr", cl)
-    gerrit_cq_cmd = gerrit_cmd_template % ("label-cq", cl)
+    gerrit_cmd_template = "gerrit %s $(gerrit --raw --no-pager deps '%s') %s"
+    gerrit_approve_cmd = gerrit_cmd_template % ("label-cr", cl, 2)
+    gerrit_verify_cmd = gerrit_cmd_template % ("label-v", cl, 1)
+    gerrit_cq_cmd = gerrit_cmd_template % ("label-cq", cl, 2)
     return "-" * 80 + textwrap.dedent(
         f"""
         VERIFIED! Local patches for r{svn_revision} are identical to the
         tree state at remote {cl_ref}. You can approve
         these changes together with the 'gerrit' command:
 
-          {gerrit_approve_cmd}
+          {gerrit_approve_cmd} && {gerrit_verify_cmd}
 
         Once approved, you can submit these changes with CQ+2:
 
