@@ -415,18 +415,23 @@ def fetch(
     )
 
 
+def checkout(git_dir: Path, ref: str) -> None:
+    """Runs `git checkout ${ref}."""
+    subprocess.run(
+        ("git", "checkout", ref),
+        check=True,
+        cwd=git_dir,
+        stdin=subprocess.DEVNULL,
+    )
+
+
 def fetch_and_checkout(git_dir: Path, remote: str, branch: str) -> None:
     """Fetches contents of `git_dir`, and checks out `remote/branch`."""
     logging.info(
         "Fetching %s and checking out to %s/%s...", git_dir, remote, branch
     )
     fetch(git_dir, remote, branch)
-    subprocess.run(
-        ["git", "checkout", f"{remote}/{branch}"],
-        check=True,
-        cwd=git_dir,
-        stdin=subprocess.DEVNULL,
-    )
+    checkout(git_dir, ref=f"{remote}/{branch}")
 
 
 def has_discardable_changes(git_dir: Path) -> bool:
@@ -458,12 +463,7 @@ def discard_changes_and_checkout(git_dir: Path, ref: str):
         cwd=git_dir,
         stdin=subprocess.DEVNULL,
     )
-    subprocess.run(
-        ["git", "checkout", ref],
-        check=True,
-        cwd=git_dir,
-        stdin=subprocess.DEVNULL,
-    )
+    checkout(git_dir, ref)
 
 
 def maybe_show_file_at_commit(

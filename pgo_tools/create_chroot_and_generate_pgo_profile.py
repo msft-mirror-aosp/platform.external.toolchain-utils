@@ -14,9 +14,10 @@ from pathlib import Path
 import re
 import shlex
 import shutil
-from typing import List
+from typing import List, Tuple
 
 from cros_utils import cros_paths
+from cros_utils import git_utils
 from llvm_tools import chroot
 from llvm_tools import get_llvm_hash
 from pgo_tools import pgo_utils
@@ -92,20 +93,12 @@ def generate_pgo_profile(
         f"--sdk-version={chroot_info.sdk_version}",
         "--",
     ]
-    toolchain_utils_bin = (
-        "/mnt/host/source/src/third_party/toolchain-utils/py/bin"
-    )
-    setup_for_workon_cmd = cros_sdk + [
-        f"{toolchain_utils_bin}/llvm_tools/setup_for_workon.py",
-        f"--checkout={sha}",
-        "--package=sys-devel/llvm",
-    ]
+    llvm_project = repo_root / cros_paths.LLVM_PROJECT
     if clean_llvm:
-        setup_for_workon_cmd.append("--clean-llvm")
-    pgo_utils.run(
-        setup_for_workon_cmd,
-        cwd=repo_root,
-    )
+        git_utils.discard_changes_and_checkout(git_dir=llvm_project, ref=sha)
+    else:
+        git_utils.checkout(git_dir=llvm_project, ref=sha)
+
     pgo_utils.run(
         cros_sdk
         + [
@@ -116,10 +109,16 @@ def generate_pgo_profile(
         ],
         cwd=repo_root,
     )
+    generate_pgo_profile_path = (
+        cros_paths.CHROOT_SOURCE_ROOT
+        / cros_paths.TOOLCHAIN_UTILS_PYBIN
+        / "pgo_tools"
+        / "generate_pgo_profile.py"
+    )
     pgo_utils.run(
         cros_sdk
         + [
-            f"{toolchain_utils_bin}/pgo_tools/generate_pgo_profile.py",
+            generate_pgo_profile_path,
             f"--output={chroot_output_file}",
         ],
         cwd=repo_root,
@@ -189,12 +188,6 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
         help="Allow the overwriting of any local changes to LLVM.",
     )
     parser.add_argument(
-        "--rev",
-        required=True,
-        type=int,
-        help="Revision of LLVM to generate a PGO profile for.",
-    )
-    parser.add_argument(
         "--profile-suffix",
         default="",
         help="""
@@ -222,7 +215,34 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
         creation.
         """,
     )
+    parser.add_argument(
+        "--branch",
+        required=True,
+        help="""
+        Branch of LLVM that a PGO profile should be generated for. It's
+        expected that the branch will have any patches applied already. Example
+        branch is 'chromeos/llvm-r547379-1'.
+        """,
+    )
+
     return parser.parse_args(argv)
+
+
+def get_rev_info_from_branch(branch_name: str) -> Tuple[int, str]:
+    # Note that `GetUpToDateReadOnlyLLVMRepo` prints helpful messages when it
+    # goes to the network, so logging that this is happening here is redundant.
+    llvm_repo = get_llvm_hash.GetCachedUpToDateReadOnlyLLVMRepo()
+
+    sha = git_utils.resolve_ref(git_dir=llvm_repo.path, ref=branch_name)
+    llvm_main = f"{git_utils.CROS_EXTERNAL_REMOTE}/{git_utils.CROS_MAIN_BRANCH}"
+    merge_base = git_utils.merge_base(
+        git_dir=llvm_repo.path,
+        refs=[sha, llvm_main],
+    )
+    if not merge_base:
+        raise ValueError(f"LLVM's main branch shares no history with {sha}?")
+    rev = llvm_repo.GetRevisionFromHash(merge_base)
+    return rev, sha
 
 
 def main(argv: List[str]):
@@ -232,17 +252,13 @@ def main(argv: List[str]):
         level=logging.INFO,
     )
 
-    opts = parse_args()
+    opts = parse_args(argv)
     pgo_utils.exit_if_in_chroot()
 
-    rev = opts.rev
-
-    # Note that `GetUpToDateReadOnlyLLVMRepo` prints helpful messages when it
-    # goes to the network, so logging that this is happening here is redundant.
-    sha = get_llvm_hash.GetCachedUpToDateReadOnlyLLVMRepo().GetHashFromRevision(
-        rev
+    rev, sha = get_rev_info_from_branch(opts.branch)
+    logging.info(
+        "Building PGO profile for %s (branched from upstream r%d)", sha, rev
     )
-    logging.info("Translated r%d == %s", rev, sha)
 
     if opts.chromiumos_tree:
         repo_root = chroot.FindChromeOSRootAbove(opts.chromiumos_tree)
