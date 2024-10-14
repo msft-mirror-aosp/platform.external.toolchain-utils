@@ -163,13 +163,7 @@ def determine_upload_command(
     ]
 
 
-def main(argv: List[str]):
-    logging.basicConfig(
-        format=">> %(asctime)s: %(levelname)s: %(filename)s:%(lineno)d: "
-        "%(message)s",
-        level=logging.INFO,
-    )
-
+def parse_args(argv: List[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -196,6 +190,7 @@ def main(argv: List[str]):
     )
     parser.add_argument(
         "--rev",
+        required=True,
         type=int,
         help="Revision of LLVM to generate a PGO profile for.",
     )
@@ -227,8 +222,17 @@ def main(argv: List[str]):
         creation.
         """,
     )
-    opts = parser.parse_args(argv)
+    return parser.parse_args(argv)
 
+
+def main(argv: List[str]):
+    logging.basicConfig(
+        format=">> %(asctime)s: %(levelname)s: %(filename)s:%(lineno)d: "
+        "%(message)s",
+        level=logging.INFO,
+    )
+
+    opts = parse_args()
     pgo_utils.exit_if_in_chroot()
 
     rev = opts.rev
