@@ -169,6 +169,48 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
     return opts
 
 
+def detect_latest_llvm_branch(
+    chromiumos_tree: Path,
+    rev: int,
+) -> Optional[str]:
+    """Returns the latest llvm-next branch for `rev`.
+
+    If no branches exist for `rev`, returns None.
+    """
+    llvm_project = chromiumos_tree / cros_paths.LLVM_PROJECT
+    # Fetch ahead of time, so we always have the most up-to-date set of remote
+    # refs possible.
+    git_utils.fetch(llvm_project, remote=git_utils.CROS_EXTERNAL_REMOTE)
+    branch_prefix = f"cros/chromeos/llvm-r{rev}-"
+    # Note that `branches` has strings with leading prefixes (e.g., `remotes/`).
+    # The code below is written to ignore those.
+    branches = git_utils.branch_list(llvm_project, glob=f"{branch_prefix}*")
+    llvm_branch_re = re.compile(re.escape(branch_prefix) + r"(\d+)$")
+    most_recent_branch = None
+    most_recent_branch_number = None
+    for branch_path in branches:
+        m = llvm_branch_re.search(branch_path)
+        if not m:
+            logging.warning(
+                "Ignoring branch %s, which doesn't match regex %s?",
+                branch_path,
+                llvm_branch_re,
+            )
+            continue
+
+        branch = branch_path[m.start() : m.end()]
+        branch_number = int(m.group(1))
+        if (
+            most_recent_branch_number is not None
+            and branch_number < most_recent_branch_number
+        ):
+            continue
+
+        most_recent_branch = branch
+        most_recent_branch_number = branch_number
+    return most_recent_branch
+
+
 def maybe_upload_new_llvm_next_profile(
     *,
     chromiumos_tree: Path,
@@ -207,11 +249,21 @@ def maybe_upload_new_llvm_next_profile(
         / "create_chroot_and_generate_pgo_profile.py"
     )
 
-    logging.info("Generating a PGO profile for LLVM r%d", llvm_next_rev)
+    llvm_next_branch = detect_latest_llvm_branch(
+        chromiumos_tree, rev=llvm_next_rev
+    )
+    if not llvm_next_branch:
+        raise ValueError(f"No LLVM branches found in CrOS for r{llvm_next_rev}")
+
+    logging.info(
+        "Generating a PGO profile for LLVM r%d from branch %s",
+        llvm_next_rev,
+        llvm_next_branch,
+    )
     cmd: pgo_utils.Command = [
         create_script,
         f"--chromiumos-tree={chromiumos_tree}",
-        f"--rev={llvm_next_rev}",
+        f"--branch={llvm_next_branch}",
         f"--profile-suffix={profile_suffix}",
     ]
     logging.info(
