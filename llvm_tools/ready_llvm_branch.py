@@ -93,7 +93,7 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    llvm_dir_action = parser.add_argument(
+    parser.add_argument(
         "-r",
         "--svn-revision",
         required=True,
@@ -125,7 +125,7 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
         specified, it is autodetected from --chromiumos-root.
         """,
     )
-    llvm_dir_action = parser.add_argument(
+    parser.add_argument(
         "--branch-number",
         default=1,
         type=int,
@@ -136,7 +136,7 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
         with a number other than '1'. Defaults to %(default)s.
         """,
     )
-    llvm_dir_action = parser.add_argument(
+    parser.add_argument(
         "--upload",
         action="store_true",
         help="Upload the branch to the correct destination branch.",
