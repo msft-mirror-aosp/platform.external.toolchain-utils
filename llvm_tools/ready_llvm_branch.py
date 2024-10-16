@@ -54,13 +54,17 @@ def _switch_branch(
 
 
 def _apply_patches_locally(
-    patches_json: Path, llvm_src_dir: Path, svn_revision: int
+    patches_json: Path,
+    llvm_src_dir: Path,
+    svn_revision: int,
+    continue_on_failure: bool,
 ) -> None:
     patch_utils.apply_all_from_json(
         svn_version=svn_revision,
         llvm_src_dir=llvm_src_dir,
         patches_json_fp=patches_json,
         patch_cmd=patch_utils.git_am_chromiumos,
+        continue_on_failure=continue_on_failure,
     )
 
 
@@ -141,6 +145,12 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
         action="store_true",
         help="Upload the branch to the correct destination branch.",
     )
+    parser.add_argument(
+        "-c",
+        "--continue-on-patch-failure",
+        action="store_true",
+        help="Skip patches that fail to apply.",
+    )
     args = parser.parse_args(argv)
     if not args.chromiumos_root and not args.patch_file:
         if repo_root := cros_paths.script_chromiumos_checkout():
@@ -190,6 +200,7 @@ def main(sys_argv: List[str]) -> None:
         args.chromiumos_root / cros_paths.DEFAULT_PATCHES_PATH,
         args.llvm_dir,
         svn_revision,
+        args.continue_on_patch_failure,
     )
     _maybe_upload_for_review(
         llvm_src_dir=args.llvm_dir,
