@@ -1129,15 +1129,34 @@ def main(argv: List[str]) -> int:
     CheckFn = Callable[
         [str, multiprocessing.pool.ThreadPool, Iterable[str]], CheckResults
     ]
-    checks: List[Tuple[str, CheckFn]] = [
-        ("check_cros_lint", check_cros_lint),
-        ("check_py_format", check_py_format),
-        ("check_py_types", functools.partial(check_py_types, mypy)),
-        ("check_go_format", check_go_format),
-        ("check_tests", check_tests),
+
+    style_exempt_files = {
+        # This file is mirrored from upstream llvm, so style checks need not
+        # apply.
+        os.path.join(toolchain_utils_root, "llvm_tools/revert_checker.py"),
+    }
+
+    style_checked_files = []
+    for f in files:
+        if f in style_exempt_files:
+            print(f"NOTE: Skipping some checks on {f}; it's style-exempt.")
+        else:
+            style_checked_files.append(f)
+
+    checks: List[Tuple[str, CheckFn, List[str]]] = [
+        ("check_cros_lint", check_cros_lint, style_checked_files),
+        ("check_py_format", check_py_format, style_checked_files),
+        (
+            "check_py_types",
+            functools.partial(check_py_types, mypy),
+            style_checked_files,
+        ),
+        ("check_go_format", check_go_format, style_checked_files),
+        ("check_tests", check_tests, files),
         (
             "check_no_compiler_wrapper_changes",
             check_no_compiler_wrapper_changes,
+            files,
         ),
     ]
 
@@ -1150,16 +1169,24 @@ def main(argv: List[str]) -> int:
     # For our single print statement...
     spawn_print_lock = threading.RLock()
 
-    def run_check(arg: Tuple[str, CheckFn]) -> Tuple[str, CheckResults]:
-        name, check_fn = arg
+    def run_check(
+        arg: Tuple[str, CheckFn, Iterable[str]]
+    ) -> Optional[Tuple[str, CheckResults]]:
+        name, check_fn, files = arg
         with spawn_print_lock:
+            if not files:
+                print("*** Skipping %s; no applicable files")
+                return None
             print("*** Spawning %s" % name)
         return name, check_fn(toolchain_utils_root, pool, files)
 
     with multiprocessing.pool.ThreadPool(num_threads) as pool:
         all_checks_ok = True
         all_autofix_commands = []
-        for check_name, result in pool.imap_unordered(run_check, checks):
+        for run_result in pool.imap_unordered(run_check, checks):
+            if not run_result:
+                continue
+            check_name, result = run_result
             ok, autofix_commands = process_check_result(
                 check_name, result, start_time
             )
