@@ -243,7 +243,8 @@ class NewRevertInfo:
 
 
 def locate_new_reverts_across_shas(
-    llvm_dir: str,
+    llvm_config: git_llvm_rev.LLVMConfig,
+    upstream_main_branch: str,
     interesting_shas: List[Tuple[str, str]],
     state: State,
 ) -> Tuple[State, List[NewRevertInfo]]:
@@ -253,7 +254,9 @@ def locate_new_reverts_across_shas(
     for friendly_name, sha in interesting_shas:
         logging.info("Finding reverts across %s (%s)", friendly_name, sha)
         all_reverts = revert_checker.find_reverts(
-            llvm_dir, sha, root="origin/" + git_llvm_rev.MAIN_BRANCH
+            llvm_config.dir,
+            sha,
+            root=f"{llvm_config.remote}/{upstream_main_branch}",
         )
         logging.info(
             "Detected the following revert(s) across %s:\n%s",
@@ -301,7 +304,8 @@ def locate_new_reverts_across_shas(
 
 def do_cherrypick(
     chromeos_path: Path,
-    llvm_dir: str,
+    llvm_config: git_llvm_rev.LLVMConfig,
+    upstream_main_branch: str,
     repository: str,
     interesting_shas: List[Tuple[str, str]],
     state: State,
@@ -309,14 +313,14 @@ def do_cherrypick(
     cc: List[str],
 ) -> State:
     def prettify_sha(sha: str) -> tiny_render.Piece:
-        rev = get_llvm_hash.GetVersionFrom(llvm_dir, sha)
+        rev = get_llvm_hash.GetVersionFrom(llvm_config.dir, sha)
         return prettify_sha_for_email(sha, rev)
 
     new_state = State()
     seen_shas: Set[str] = set()
 
     new_state, new_revert_infos = locate_new_reverts_across_shas(
-        llvm_dir, interesting_shas, state
+        llvm_config, upstream_main_branch, interesting_shas, state
     )
 
     for revert_info in new_revert_infos:
@@ -334,7 +338,7 @@ def do_cherrypick(
             _upload_patches(
                 sha=sha,
                 reverted_sha=reverted_sha,
-                llvm_dir=llvm_dir,
+                llvm_dir=llvm_config.dir,
                 chromeos_path=chromeos_path,
                 reviewers=reviewers,
                 cc=cc,
@@ -481,25 +485,26 @@ def maybe_email_about_stale_heads(
 
 def do_email(
     is_dry_run: bool,
-    llvm_dir: str,
+    llvm_config: git_llvm_rev.LLVMConfig,
+    upstream_main_branch: str,
     repository: str,
     interesting_shas: List[Tuple[str, str]],
     state: State,
     recipients: _EmailRecipients,
 ) -> State:
     def prettify_sha(sha: str) -> tiny_render.Piece:
-        rev = get_llvm_hash.GetVersionFrom(llvm_dir, sha)
+        rev = get_llvm_hash.GetVersionFrom(llvm_config.dir, sha)
         return prettify_sha_for_email(sha, rev)
 
     def get_sha_description(sha: str) -> tiny_render.Piece:
         return subprocess.check_output(
             ["git", "log", "-n1", "--format=%s", sha],
-            cwd=llvm_dir,
+            cwd=llvm_config.dir,
             encoding="utf-8",
         ).strip()
 
     new_state, new_reverts = locate_new_reverts_across_shas(
-        llvm_dir, interesting_shas, state
+        llvm_config, upstream_main_branch, interesting_shas, state
     )
 
     for revert_info in new_reverts:
@@ -606,6 +611,11 @@ def main(argv: List[str]) -> int:
         chromeos_path = opts.chromeos_dir
         interesting_shas = _find_interesting_chromeos_shas(chromeos_path)
         recipients = _EmailRecipients(well_known=["mage"], direct=cc)
+        llvm_config = git_llvm_rev.LLVMConfig(
+            remote=git_utils.CROS_EXTERNAL_REMOTE,
+            dir=llvm_dir,
+        )
+        upstream_main_branch = "upstream/main"
     elif opts.repository == "android":
         interesting_shas = _find_interesting_android_shas(
             opts.android_llvm_toolchain_dir
@@ -614,6 +624,11 @@ def main(argv: List[str]) -> int:
             well_known=[],
             direct=["android-llvm-dev@google.com"] + cc,
         )
+        llvm_config = git_llvm_rev.LLVMConfig(
+            remote="origin",
+            dir=llvm_dir,
+        )
+        upstream_main_branch = git_llvm_rev.MAIN_BRANCH
         # Set this to placate linting bits. Shouldn't be used by
         # `opts.repository == "android"` code.
         chromeos_path = Path()
@@ -635,7 +650,8 @@ def main(argv: List[str]) -> int:
 
         new_state = do_cherrypick(
             chromeos_path=chromeos_path,
-            llvm_dir=llvm_dir,
+            llvm_config=llvm_config,
+            upstream_main_branch=upstream_main_branch,
             repository=repository,
             interesting_shas=interesting_shas,
             state=state,
@@ -645,7 +661,8 @@ def main(argv: List[str]) -> int:
     else:
         new_state = do_email(
             is_dry_run=action == "dry-run",
-            llvm_dir=llvm_dir,
+            llvm_config=llvm_config,
+            upstream_main_branch=upstream_main_branch,
             interesting_shas=interesting_shas,
             repository=repository,
             state=state,
