@@ -56,8 +56,18 @@ TEST=CQ
 def make_base_commit(
     toolchain_utils_dir: Path, llvm_src_dir: Path, chromiumos_overlay: Path
 ) -> None:
-    """Create a commit which represents the base of a ChromeOS branch."""
+    """Create a commit which represents the base of a ChromeOS branch.
 
+    Internally this is just `write_base_changes` followed by `commit_all`.
+    """
+    write_base_changes(toolchain_utils_dir, llvm_src_dir, chromiumos_overlay)
+    git_utils.commit_all_changes(llvm_src_dir, BASE_COMMIT_MESSAGE)
+
+
+def write_base_changes(
+    toolchain_utils_dir: Path, llvm_src_dir: Path, chromiumos_overlay: Path
+) -> None:
+    """Make changes which represents the base of a ChromeOS branch."""
     toolchain_utils_copy_files = (
         "OWNERS",
         "OWNERS.toolchain",
@@ -67,7 +77,6 @@ def make_base_commit(
     (llvm_src_dir / "PRESUBMIT.cfg").write_text(PRESUBMIT_CFG_CONTENTS)
     write_all_gentoo_cmake_hacks(llvm_src_dir, chromiumos_overlay)
     set_up_cros_dir(llvm_src_dir)
-    git_utils.commit_all_changes(llvm_src_dir, BASE_COMMIT_MESSAGE)
 
 
 def set_up_cros_dir(llvm_src_dir: Path) -> None:

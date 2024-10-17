@@ -25,7 +25,7 @@ import logging
 from pathlib import Path
 import shlex
 import subprocess
-from typing import List
+from typing import Callable, List
 
 from cros_utils import cros_paths
 from cros_utils import git_utils
@@ -58,12 +58,16 @@ def _apply_patches_locally(
     llvm_src_dir: Path,
     svn_revision: int,
     continue_on_failure: bool,
+    apply_only: bool,
 ) -> None:
+    patch_cmd: Callable = patch_utils.git_am_chromiumos
+    if apply_only:
+        patch_cmd = patch_utils.git_apply
     patch_utils.apply_all_from_json(
         svn_version=svn_revision,
         llvm_src_dir=llvm_src_dir,
         patches_json_fp=patches_json,
-        patch_cmd=patch_utils.git_am_chromiumos,
+        patch_cmd=patch_cmd,
         continue_on_failure=continue_on_failure,
     )
 
@@ -97,13 +101,19 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument(
+    git_revision_group = parser.add_mutually_exclusive_group(required=True)
+    git_revision_group.add_argument(
         "-r",
         "--svn-revision",
-        required=True,
         type=int,
         help="SVN Revision for which to apply patches. e.g. '516547'.",
     )
+    git_revision_group.add_argument(
+        "--head",
+        action="store_true",
+        help="Apply patches to current HEAD, using the HEAD's revision.",
+    )
+
     chromiumos_root_action = parser.add_argument(
         "--chromiumos-root",
         type=Path,
@@ -140,16 +150,23 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
         with a number other than '1'. Defaults to %(default)s.
         """,
     )
-    parser.add_argument(
+    upload_group = parser.add_mutually_exclusive_group()
+    upload_group.add_argument(
         "--upload",
         action="store_true",
         help="Upload the branch to the correct destination branch.",
+    )
+    upload_group.add_argument(
+        "-a",
+        "--apply",
+        action="store_true",
+        help="Apply only, don't commit. Cannot be passed with --upload.",
     )
     parser.add_argument(
         "-c",
         "--continue-on-patch-failure",
         action="store_true",
-        help="Skip patches that fail to apply.",
+        help="Skip patches that fail to apply. Useful with --apply.",
     )
     args = parser.parse_args(argv)
     if not args.chromiumos_root and not args.patch_file:
@@ -185,25 +202,62 @@ def main(sys_argv: List[str]) -> None:
         level=logging.INFO,
     )
     args = parse_args(sys_argv)
-    svn_revision = args.svn_revision
-    branch_name = _switch_branch(
-        args.llvm_dir, svn_revision, args.branch_number
-    )
-    logging.info("Created and switched to branch %s", branch_name)
-    llvm_project_base_commit.make_base_commit(
-        args.chromiumos_root / cros_paths.TOOLCHAIN_UTILS,
-        args.llvm_dir,
-        chromiumos_overlay=args.chromiumos_root / cros_paths.CHROMIUMOS_OVERLAY,
-    )
-    logging.info("Committed base commit")
+    branch_name = ""
+    if args.svn_revision:
+        svn_revision = args.svn_revision
+        branch_name = _switch_branch(
+            args.llvm_dir, svn_revision, args.branch_number
+        )
+        logging.info("Created and switched to branch %s.", branch_name)
+    elif args.head:
+        to_translate = git_utils.merge_base(
+            args.llvm_dir,
+            ["cros/upstream/main", "HEAD"],
+        )
+        if not to_translate:
+            to_translate = "HEAD"
+        svn_revision = git_llvm_rev.translate_sha_to_rev(
+            git_llvm_rev.LLVMConfig(
+                git_utils.CROS_EXTERNAL_REMOTE, args.llvm_dir
+            ),
+            to_translate,
+        ).number
+        logging.info("Applying to HEAD, as r%s", svn_revision)
+    else:
+        raise ValueError("Unreachable: either --head or -r is required")
+    toolchain_utils_dir = args.chromiumos_root / cros_paths.TOOLCHAIN_UTILS
+    chromiumos_overlay = args.chromiumos_root / cros_paths.CHROMIUMOS_OVERLAY
+    if args.apply:
+        llvm_project_base_commit.write_base_changes(
+            toolchain_utils_dir,
+            args.llvm_dir,
+            chromiumos_overlay,
+        )
+        logging.info(
+            "--apply passed, wrote cros base changes, but didn't commit."
+        )
+    else:
+        llvm_project_base_commit.make_base_commit(
+            toolchain_utils_dir,
+            args.llvm_dir,
+            chromiumos_overlay,
+        )
+        logging.info("Committed base commit.")
     _apply_patches_locally(
         args.chromiumos_root / cros_paths.DEFAULT_PATCHES_PATH,
         args.llvm_dir,
         svn_revision,
         args.continue_on_patch_failure,
+        args.apply,
     )
-    _maybe_upload_for_review(
-        llvm_src_dir=args.llvm_dir,
-        branch_name=branch_name,
-        dry_run=not args.upload,
-    )
+    if not args.head:
+        _maybe_upload_for_review(
+            llvm_src_dir=args.llvm_dir,
+            branch_name=branch_name,
+            dry_run=not args.upload,
+        )
+    else:
+        logging.warning(
+            "--head passed: Cannot upload this branch for review, as"
+            " changes may not be on a branch."
+        )

@@ -268,7 +268,7 @@ class PatchEntry:
 
         When using gnu_patch, this will pass --dry-run.
         When using git_am or git_apply, this will instead
-        use git_apply with --summary.
+        use git_apply with --check.
         """
         if any(
             patch_cmd is cmd
@@ -281,7 +281,7 @@ class PatchEntry:
         ):
             # There is no dry run option for git am,
             # so we use git apply for test.
-            return self.apply(root_dir, git_apply, ["--summary"])
+            return self.apply(root_dir, git_apply, ["--check"])
         if patch_cmd is gnu_patch or patch_cmd is None:
             return self.apply(root_dir, patch_cmd, ["--dry-run"])
         raise ValueError(f"No such patch command: {patch_cmd.__name__}.")
