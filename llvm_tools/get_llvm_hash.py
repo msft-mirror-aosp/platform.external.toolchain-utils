@@ -19,6 +19,7 @@ import sys
 import tempfile
 from typing import Iterator, Optional, Tuple, Union
 
+from cros_utils import cros_paths
 from cros_utils import git_utils
 from llvm_tools import chroot
 from llvm_tools import cros_llvm_repo
@@ -486,6 +487,48 @@ class LLVMHash:
             ["git", "ls-remote", _LLVM_GIT_URL, path_to_main_branch]
         )
         return llvm_tot_git_hash.rstrip().split()[0]
+
+
+def DetectLatestLLVMBranch(
+    chromiumos_tree: Path,
+    rev: int,
+) -> Optional[str]:
+    """Returns the latest llvm-next branch for `rev`.
+
+    If no branches exist for `rev`, returns None.
+    """
+    llvm_project = chromiumos_tree / cros_paths.LLVM_PROJECT
+    # Fetch ahead of time, so we always have the most up-to-date set of remote
+    # refs possible.
+    git_utils.fetch(llvm_project, remote=git_utils.CROS_EXTERNAL_REMOTE)
+    branch_prefix = f"cros/chromeos/llvm-r{rev}-"
+    # Note that `branches` has strings with leading prefixes (e.g., `remotes/`).
+    # The code below is written to ignore those.
+    branches = git_utils.branch_list(llvm_project, glob=f"{branch_prefix}*")
+    llvm_branch_re = re.compile(re.escape(branch_prefix) + r"(\d+)$")
+    most_recent_branch = None
+    most_recent_branch_number = None
+    for branch_path in branches:
+        m = llvm_branch_re.search(branch_path)
+        if not m:
+            logging.warning(
+                "Ignoring llvm branch %s, which doesn't match regex %s?",
+                branch_path,
+                llvm_branch_re,
+            )
+            continue
+
+        branch = branch_path[m.start() : m.end()]
+        branch_number = int(m.group(1))
+        if (
+            most_recent_branch_number is not None
+            and branch_number < most_recent_branch_number
+        ):
+            continue
+
+        most_recent_branch = branch
+        most_recent_branch_number = branch_number
+    return most_recent_branch
 
 
 def main() -> None:
