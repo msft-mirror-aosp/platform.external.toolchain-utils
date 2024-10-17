@@ -467,6 +467,8 @@ def main(argv: List[str]) -> None:
         remote=git_utils.CROS_EXTERNAL_REMOTE,
         branch=git_utils.CROS_MAIN_BRANCH,
         ref=maybe_sha,
+        reviewers=(git_utils.REVIEWER_MAGE,),
+        cc=(git_utils.REVIEWER_DETECTIVE,),
     )
     for cl in cls:
         git_utils.try_set_autosubmit_labels(chromiumos_overlay, cl)

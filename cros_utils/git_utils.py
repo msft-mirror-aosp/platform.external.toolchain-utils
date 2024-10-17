@@ -16,8 +16,9 @@ import tempfile
 from typing import Dict, Generator, Iterable, List, Optional
 
 
-# Email address used to tag the detective as a reviewer.
+# Email address used to tag the detective/mage as a reviewer.
 REVIEWER_DETECTIVE = "c-compiler-chrome@google.com"
+REVIEWER_MAGE = "chromeos-toolchain-mage@google.com"
 
 # Default git naming conventions throughout ChromeOS.
 CROS_EXTERNAL_REMOTE = "cros"
