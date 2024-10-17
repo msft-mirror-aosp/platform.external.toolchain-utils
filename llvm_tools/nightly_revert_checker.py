@@ -15,17 +15,17 @@ import logging
 import os
 from pathlib import Path
 import pprint
+import re
 import subprocess
 import time
-from typing import Any, Callable, Dict, List, NamedTuple, Set, Tuple
+from typing import Any, Callable, Dict, Iterable, List, NamedTuple, Tuple
 
-from cros_utils import cros_paths
 from cros_utils import email_sender
 from cros_utils import git_utils
 from cros_utils import tiny_render
 from llvm_tools import get_llvm_hash
-from llvm_tools import get_patch
 from llvm_tools import git_llvm_rev
+from llvm_tools import patch_utils
 from llvm_tools import revert_checker
 
 
@@ -254,7 +254,7 @@ def locate_new_reverts_across_shas(
     for friendly_name, sha in interesting_shas:
         logging.info("Finding reverts across %s (%s)", friendly_name, sha)
         all_reverts = revert_checker.find_reverts(
-            llvm_config.dir,
+            str(llvm_config.dir),
             sha,
             root=f"{llvm_config.remote}/{upstream_main_branch}",
         )
@@ -302,6 +302,18 @@ def locate_new_reverts_across_shas(
     return new_state, revert_infos
 
 
+def detect_latest_cros_llvm_branch(
+    chromeos_path: Path, llvm_config: git_llvm_rev.LLVMConfig, sha: str
+) -> str:
+    rev = git_llvm_rev.translate_sha_to_rev(llvm_config, sha).number
+    result = get_llvm_hash.DetectLatestLLVMBranch(chromeos_path, rev)
+    if not result:
+        raise ValueError(
+            f"No branches in {llvm_config.dir} found for LLVM revision {rev}?"
+        )
+    return result
+
+
 def do_cherrypick(
     chromeos_path: Path,
     llvm_config: git_llvm_rev.LLVMConfig,
@@ -317,32 +329,46 @@ def do_cherrypick(
         return prettify_sha_for_email(sha, rev)
 
     new_state = State()
-    seen_shas: Set[str] = set()
-
     new_state, new_revert_infos = locate_new_reverts_across_shas(
         llvm_config, upstream_main_branch, interesting_shas, state
     )
+    llvm_config_dir = Path(llvm_config.dir)
 
     for revert_info in new_revert_infos:
         logging.info(
             "Applying new reverts across %s...", revert_info.friendly_name
         )
-        for sha, reverted_sha in revert_info.new_reverts:
-            # b/339147957: a revert may cross multiple `interesting_shas`.
-            # In that case, we only need to apply it once to actually cover all
-            # of said SHAs.
-            if sha in seen_shas:
-                logging.info("Skipping reapplication of SHA %s", sha)
-                continue
-            seen_shas.add(sha)
-            _upload_patches(
-                sha=sha,
-                reverted_sha=reverted_sha,
-                llvm_dir=llvm_config.dir,
-                chromeos_path=chromeos_path,
-                reviewers=reviewers,
-                cc=cc,
-            )
+        branch = detect_latest_cros_llvm_branch(
+            chromeos_path, llvm_config, revert_info.sha
+        )
+        # The branch will come in the form 'cros/chromeos/llvm-r${N}-${M}`.
+        # `cros` is the remote
+        assert branch.startswith(
+            "cros/"
+        ), f"Expected {branch} to start with 'cros/'"
+        branch_without_remote = branch[len("cros/") :]
+        branch_head = git_utils.resolve_ref(llvm_config_dir, branch)
+        with git_utils.create_worktree(
+            llvm_config_dir, commitish=branch_head
+        ) as worktree:
+            # Note that it's possible that we see the same SHA in multiple
+            # iterations of this loop. Since we're committing to separate
+            # branches, we need to upload separate patches.
+            for sha, reverted_sha in revert_info.new_reverts:
+                # Always `checkout` the branch's original HEAD, so we don't
+                # create a patch stack on Gerrit. Often the reviewer will want
+                # to keep/drop certain patches; stacking them adds complexity
+                # for questionable benefit.
+                git_utils.discard_changes_and_checkout(worktree, branch_head)
+                _upload_revert_cherry_pick(
+                    sha=sha,
+                    branch_without_remote=branch_without_remote,
+                    reverted_sha=reverted_sha,
+                    llvm_config=llvm_config,
+                    llvm_worktree=worktree,
+                    reviewers=reviewers,
+                    cc=cc,
+                )
     maybe_email_about_stale_heads(
         new_state,
         repository,
@@ -356,48 +382,138 @@ def do_cherrypick(
     return new_state
 
 
-def _upload_patches(
+def _append_footers_to_commit_message(
+    message: str, footers: Iterable[str]
+) -> str:
+    lines = message.rstrip().splitlines()
+    footer_key_re = re.compile(r"^\S+:")
+
+    footer_block = []
+    nonfooter_block = lines
+
+    # Parse out existing footers. Footers may/may not exist in a previous
+    # commit. If they do, they all exist in the last paragraph of a commit
+    # message, and they all match `footer_key_re`.
+    for i, line in reversed(list(enumerate(lines))):
+        if not line:
+            nonfooter_block = lines[:i]
+            footer_block = lines[i + 1 :]
+            break
+
+        # If this line isn't a valid footer line, the paragraph we're in isn't
+        # a series of footers.
+        if not footer_key_re.search(line):
+            break
+
+    footer_block += footers
+    # Add `[""]` to ensure that there's a line separating the nonfooters from
+    # the paragraph of footers.
+    return "\n".join(nonfooter_block + [""] + footer_block)
+
+
+def _upload_revert_cherry_pick(
     sha: str,
+    branch_without_remote: str,
     reverted_sha: str,
-    llvm_dir: str,
-    chromeos_path: Path,
+    llvm_config: git_llvm_rev.LLVMConfig,
+    llvm_worktree: Path,
     reviewers: List[str],
     cc: List[str],
 ):
     """Mockable helper to create and upload patches."""
-    patch_context = get_patch.PatchContext(
-        llvm_project_dir=Path(llvm_dir),
-        chromiumos_root=chromeos_path,
-        start_ref=get_patch.LLVMGitRef(reverted_sha),
-        platforms=["chromiumos"],
-    )
-    patch_context.apply_patches(get_patch.LLVMGitRef(sha))
-    git_repo_path = chromeos_path / cros_paths.CHROMIUMOS_OVERLAY
-    commit_message = [
-        "llvm: nightly revert patches\n",
-    ]
-    git_log_output = subprocess.run(
-        ["git", "log", "-n1", "--format=%s", sha],
-        cwd=llvm_dir,
-        stdout=subprocess.PIPE,
-        encoding="utf-8",
-        check=True,
-    ).stdout
-    commit_message.extend(
-        (
-            f"https://github.com/llvm/llvm-project/commit/{sha}",
-            "",
-            git_log_output,
+    cherry_pick_returncode = subprocess.run(
+        ["git", "cherry-pick", sha],
+        check=False,
+        cwd=llvm_worktree,
+        stdin=subprocess.DEVNULL,
+    ).returncode
+    # If a cherry-pick fails, it could be for one of two reasons:
+    #   1. It's empty.
+    #   2. It's a merge conflict.
+    # In the former case, the cherry-pick is a nop that should be ignored,
+    # since we've already picked it (or equivalent) somehow. In the latter, we
+    # still want to bring it to the mage's attention, so upload it with the
+    # merge-conflict markers baked in. If the mage cares, they can fix it up
+    # and land it.
+    if cherry_pick_returncode:
+        if not git_utils.has_discardable_changes(llvm_worktree):
+            logging.warning(
+                "Cherry-pick of SHA %s would be empty; skipping upload", sha
+            )
+            return
+
+        logging.error(
+            "Cherry-pick failed. Still uploading, but with highlights."
         )
+        subprocess.run(
+            ["git", "add", "."],
+            check=True,
+            cwd=llvm_worktree,
+            stdin=subprocess.DEVNULL,
+        )
+        subprocess.run(
+            ["git", "cherry-pick", "--continue"],
+            check=True,
+            cwd=llvm_worktree,
+            stdin=subprocess.DEVNULL,
+        )
+        is_cl_a_merge_conflict = True
+    else:
+        is_cl_a_merge_conflict = False
+
+    footer_lines = patch_utils.generate_chromiumos_llvm_footer(
+        is_cherry=True,
+        apply_from=git_llvm_rev.translate_sha_to_rev(
+            llvm_config, reverted_sha
+        ).number,
+        apply_until=git_llvm_rev.translate_sha_to_rev(llvm_config, sha).number,
+        original_sha=sha,
+        platforms=("chromiumos",),
+        info=None,
     )
-    git_utils.commit_all_changes(git_repo_path, "\n".join(commit_message))
-    git_utils.upload_to_gerrit(
-        git_repo_path,
+    commit_message = subprocess.run(
+        ["git", "log", "-n1", "--format=%B", sha],
+        check=True,
+        cwd=llvm_worktree,
+        encoding="utf-8",
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+    ).stdout
+
+    new_commit_message = _append_footers_to_commit_message(
+        commit_message, footer_lines
+    )
+    if is_cl_a_merge_conflict:
+        new_commit_message = f"MERGE CONFLICT: {new_commit_message}"
+
+    subprocess.run(
+        ["git", "commit", "--amend", "-m", new_commit_message],
+        check=True,
+        cwd=llvm_worktree,
+        stdin=subprocess.DEVNULL,
+    )
+    cl_head = git_utils.resolve_ref(git_dir=llvm_worktree, ref="HEAD")
+    logging.info("Successfully cherry-picked %s as %s", sha, cl_head)
+    cls = git_utils.upload_to_gerrit(
+        llvm_worktree,
+        ref=cl_head,
         remote=git_utils.CROS_EXTERNAL_REMOTE,
-        branch=git_utils.CROS_MAIN_BRANCH,
+        branch=branch_without_remote,
         reviewers=reviewers,
         cc=cc,
     )
+    if is_cl_a_merge_conflict:
+        # Set V-1 for more visibility.
+        for cl in cls:
+            try:
+                git_utils.set_gerrit_label(
+                    cwd=Path(llvm_config.dir),
+                    cl_id=cl,
+                    label_name=git_utils.GERRIT_LABEL_VERIFIED,
+                    label_value="-1",
+                )
+            except subprocess.CalledProcessError:
+                logging.warning("Failed to set V-1 on CL %d; ignoring", cl)
 
 
 def prettify_sha_for_email(
@@ -643,7 +759,7 @@ def main(argv: List[str]) -> int:
     # We want to be as free of obvious side-effects as possible in case
     # something above breaks. Hence, action as late as possible.
     if action == "cherry-pick":
-        if opts.repository != "chromeos":
+        if repository != "chromeos":
             raise RuntimeError(
                 "only chromeos supports automatic cherry-picking."
             )

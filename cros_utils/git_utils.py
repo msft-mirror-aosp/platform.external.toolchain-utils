@@ -10,7 +10,6 @@ import enum
 import logging
 from pathlib import Path
 import re
-import shlex
 import subprocess
 import tempfile
 from typing import Dict, Generator, Iterable, List, Optional
@@ -24,6 +23,11 @@ REVIEWER_MAGE = "chromeos-toolchain-mage@google.com"
 CROS_EXTERNAL_REMOTE = "cros"
 CROS_INTERNAL_REMOTE = "cros-internal"
 CROS_MAIN_BRANCH = "main"
+
+# Gerrit labels
+GERRIT_LABEL_AUTOSUBMIT = "label-as"
+GERRIT_LABEL_CQ = "label-cq"
+GERRIT_LABEL_VERIFIED = "label-v"
 
 
 class Channel(enum.Enum):
@@ -244,6 +248,28 @@ def upload_to_gerrit(
     return _parse_cls_from_upload_output(run_result.stdout)
 
 
+def set_gerrit_label(cwd: Path, cl_id: int, label_name: str, label_value: str):
+    """Sets the given gerrit label to the given value for `cl_id`.
+
+    Args:
+        cwd: the directory that the `gerrit` tool should be run in. Anywhere in
+            a ChromeOS tree will do. The `gerrit` command fails if it isn't run
+            from within a ChromeOS tree.
+        cl_id: The CL number to apply the label to.
+        label_name: Name of the gerrit label to apply, e.g., "label-as"
+        label_value: Value of the label, e.g., "1"
+
+    Raises:
+        subprocess.CalledProcessError if the label wasn't set.
+    """
+    subprocess.run(
+        ("gerrit", label_name, str(cl_id), label_value),
+        cwd=cwd,
+        check=True,
+        stdin=subprocess.DEVNULL,
+    )
+
+
 def try_set_autosubmit_labels(cwd: Path, cl_id: int) -> None:
     """Sets autosubmit on a CL. Logs - not raises - on failure.
 
@@ -256,27 +282,17 @@ def try_set_autosubmit_labels(cwd: Path, cl_id: int) -> None:
             from within a ChromeOS tree.
         cl_id: The CL number to apply labels to.
     """
-    gerrit_cl_id = str(cl_id)
-    gerrit_commands = (
-        ["gerrit", "label-as", gerrit_cl_id, "1"],
-        ["gerrit", "label-cq", gerrit_cl_id, "1"],
-        ["gerrit", "label-v", gerrit_cl_id, "1"],
+    labels = (
+        (GERRIT_LABEL_AUTOSUBMIT, "1"),
+        (GERRIT_LABEL_CQ, "1"),
+        (GERRIT_LABEL_VERIFIED, "1"),
     )
-    for cmd in gerrit_commands:
-        # Run the gerrit commands inside of toolchain_utils, since `gerrit`
-        # needs to be run inside of a ChromeOS tree to work. While
-        # `toolchain-utils` can be checked out on its own, that's not how this
-        # script is expeted to be used.
-        return_code = subprocess.run(
-            cmd,
-            cwd=cwd,
-            check=False,
-            stdin=subprocess.DEVNULL,
-        ).returncode
-        if return_code:
+    for label_name, label_value in labels:
+        try:
+            set_gerrit_label(cwd, cl_id, label_name, label_value)
+        except subprocess.CalledProcessError:
             logging.warning(
-                "Failed to run gerrit command %s. Ignoring.",
-                shlex.join(cmd),
+                "Failed setting label %s on CL %d; ignoring", label_name, cl_id
             )
 
 

@@ -459,27 +459,34 @@ def _run_git_applylike(
     return PatchResult(succeeded=True)
 
 
-def _chromiumos_llvm_footer(pe: PatchEntry) -> List[str]:
-    is_cherry = pe.rel_patch_path.startswith("cherry/")
+def generate_chromiumos_llvm_footer(
+    is_cherry: bool,
+    apply_from: Optional[int] = None,
+    apply_until: Optional[int] = None,
+    original_sha: Optional[str] = None,
+    platforms: Iterable[str] = (),
+    info: Optional[str] = None,
+) -> List[str]:
+    """Generates a commit footer given patch metadata.
+
+    Returns:
+        A list of commit footer lines.
+    """
     # We want to keep the order of these alphabetical,
     # so the creation of the footer looks a little weird.
     extra_metadata = []
-    if pe.metadata:
-        if info := pe.metadata.get("info"):
-            extra_metadata.append("patch.metadata.info: " + ", ".join(info))
-        if original_sha := pe.metadata.get("original_sha"):
-            extra_metadata.append(
-                f"patch.metadata.original_sha: {original_sha}"
-            )
-    if pe.platforms:
-        extra_metadata.append("patch.platforms: " + ", ".join(pe.platforms))
+    if info:
+        extra_metadata.append("patch.metadata.info: " + ", ".join(info))
+    if original_sha:
+        extra_metadata.append(f"patch.metadata.original_sha: {original_sha}")
+    if platforms:
+        extra_metadata.append("patch.platforms: " + ", ".join(platforms))
     from_rev = "0"
     until_rev = "null"
-    if pe.version_range:
-        if from_rev_int := pe.version_range.get("from"):
-            from_rev = str(from_rev_int)
-        if until_rev_int := pe.version_range.get("until"):
-            until_rev = str(until_rev_int)
+    if apply_from is not None:
+        from_rev = str(apply_from)
+    if apply_until is not None:
+        until_rev = str(apply_until)
     return (
         [
             "",
@@ -490,6 +497,19 @@ def _chromiumos_llvm_footer(pe: PatchEntry) -> List[str]:
             f"patch.version_range.from: {from_rev}",
             f"patch.version_range.until: {until_rev}",
         ]
+    )
+
+
+def _chromiumos_llvm_footer(pe: PatchEntry) -> List[str]:
+    version_range = pe.version_range or {}
+    metadata = pe.metadata or {}
+    return generate_chromiumos_llvm_footer(
+        is_cherry=pe.rel_patch_path.startswith("cherry/"),
+        apply_from=version_range.get("from"),
+        apply_until=version_range.get("until"),
+        original_sha=metadata.get("original_sha"),
+        platforms=pe.platforms or (),
+        info=metadata.get("info"),
     )
 
 
