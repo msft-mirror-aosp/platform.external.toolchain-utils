@@ -93,32 +93,21 @@ class State:
 def _find_interesting_android_shas(
     android_llvm_toolchain_dir: str,
 ) -> List[Tuple[str, str]]:
-    llvm_project = os.path.join(
-        android_llvm_toolchain_dir, "toolchain/llvm-project"
+    llvm_project = Path(android_llvm_toolchain_dir) / "toolchain/llvm-project"
+    aosp_main_sha = git_utils.resolve_ref(llvm_project, "aosp/main")
+    merge_base = subprocess.check_output(
+        ["git", "merge-base", aosp_main_sha, "aosp/upstream-main"],
+        cwd=llvm_project,
+        encoding="utf-8",
+    ).strip()
+    logging.info(
+        "Merge-base for aosp/main (HEAD == %s) and aosp/upstream-main is %s",
+        aosp_main_sha,
+        merge_base,
     )
 
-    def get_llvm_merge_base(branch: str) -> str:
-        head_sha = subprocess.check_output(
-            ["git", "rev-parse", branch],
-            cwd=llvm_project,
-            encoding="utf-8",
-        ).strip()
-        merge_base = subprocess.check_output(
-            ["git", "merge-base", branch, "aosp/upstream-main"],
-            cwd=llvm_project,
-            encoding="utf-8",
-        ).strip()
-        logging.info(
-            "Merge-base for %s (HEAD == %s) and upstream-main is %s",
-            branch,
-            head_sha,
-            merge_base,
-        )
-        return merge_base
-
-    main_legacy = get_llvm_merge_base("aosp/master-legacy")  # nocheck
-    # Android no longer has a testing branch, so just follow main-legacy.
-    return [("main-legacy", main_legacy)]
+    # Android no longer has a testing branch, so just follow main.
+    return [("aosp/main", merge_base)]
 
 
 def _find_interesting_chromeos_shas(
