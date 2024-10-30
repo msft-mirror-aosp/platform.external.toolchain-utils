@@ -9,7 +9,7 @@ import dataclasses
 import json
 import subprocess
 import textwrap
-from typing import Dict
+from typing import Dict, Iterable
 from unittest import mock
 
 from llvm_tools import cros_cls
@@ -22,6 +22,18 @@ ARBITRARY_CL_URL = cros_cls.ChangeListURL.parse("crrev.com/c/98765432/1")
 
 class Test(test_helpers.TempDirTestCase):
     """Tests for llvm_next_py_autoupdate."""
+
+    def toolchain_owners_with_listing(
+        self, owners: Iterable[str]
+    ) -> llvm_next_py_autoupdate.LazyToolchainOwners:
+        owners_file_path = self.make_tempdir() / "OWNERS.mock"
+        owners_file_path.write_text("\n".join(owners), encoding="utf-8")
+        return llvm_next_py_autoupdate.LazyToolchainOwners(owners_file_path)
+
+    def empty_toolchain_owners(
+        self,
+    ) -> llvm_next_py_autoupdate.LazyToolchainOwners:
+        return self.toolchain_owners_with_listing(())
 
     @mock.patch.object(subprocess, "run")
     def test_fetch_cl_info_works_with_new_cl(self, mock_subprocess_run):
@@ -38,7 +50,9 @@ class Test(test_helpers.TempDirTestCase):
         )
         mock_subprocess_run.return_value = mock_run_return_value
         self.assertEqual(
-            llvm_next_py_autoupdate.fetch_cl_info(ARBITRARY_CL_URL),
+            llvm_next_py_autoupdate.fetch_cl_info(
+                self.empty_toolchain_owners(), ARBITRARY_CL_URL
+            ),
             llvm_next_py_autoupdate.GerritCLInfo(
                 is_abandoned_or_merged=False,
                 is_uploader_a_googler=False,
@@ -63,13 +77,108 @@ class Test(test_helpers.TempDirTestCase):
                 ]
             )
             self.assertEqual(
-                llvm_next_py_autoupdate.fetch_cl_info(ARBITRARY_CL_URL),
+                llvm_next_py_autoupdate.fetch_cl_info(
+                    self.empty_toolchain_owners(), ARBITRARY_CL_URL
+                ),
                 llvm_next_py_autoupdate.GerritCLInfo(
                     is_abandoned_or_merged=True,
                     is_uploader_a_googler=False,
                     most_recent_patch_set=123,
                 ),
             )
+
+    @mock.patch.object(subprocess, "run")
+    def test_fetch_cl_info_determines_googler_is_googler(
+        self, mock_subprocess_run
+    ):
+        mock_run_return_value = mock.MagicMock()
+        mock_run_return_value.stdout = json.dumps(
+            [
+                {
+                    "status": "NEW",
+                    "currentPatchSet": {
+                        "number": "123",
+                        "uploader": {
+                            "email": "foo@google.com",
+                        },
+                    },
+                }
+            ]
+        )
+        mock_subprocess_run.return_value = mock_run_return_value
+        self.assertEqual(
+            llvm_next_py_autoupdate.fetch_cl_info(
+                self.empty_toolchain_owners(), ARBITRARY_CL_URL
+            ),
+            llvm_next_py_autoupdate.GerritCLInfo(
+                is_abandoned_or_merged=False,
+                is_uploader_a_googler=True,
+                most_recent_patch_set=123,
+            ),
+        )
+
+    @mock.patch.object(subprocess, "run")
+    def test_fetch_cl_info_determines_chromium_isnt_googler(
+        self, mock_subprocess_run
+    ):
+        mock_run_return_value = mock.MagicMock()
+        mock_run_return_value.stdout = json.dumps(
+            [
+                {
+                    "status": "NEW",
+                    "currentPatchSet": {
+                        "number": "123",
+                        "uploader": {
+                            "email": "foo@chromium.org",
+                        },
+                    },
+                }
+            ]
+        )
+        mock_subprocess_run.return_value = mock_run_return_value
+        self.assertEqual(
+            llvm_next_py_autoupdate.fetch_cl_info(
+                self.empty_toolchain_owners(), ARBITRARY_CL_URL
+            ),
+            llvm_next_py_autoupdate.GerritCLInfo(
+                is_abandoned_or_merged=False,
+                is_uploader_a_googler=False,
+                most_recent_patch_set=123,
+            ),
+        )
+
+    @mock.patch.object(subprocess, "run")
+    def test_fetch_cl_info_determines_chromium_owner_is_googler(
+        self, mock_subprocess_run
+    ):
+        mock_run_return_value = mock.MagicMock()
+        mock_run_return_value.stdout = json.dumps(
+            [
+                {
+                    "status": "NEW",
+                    "currentPatchSet": {
+                        "number": "123",
+                        "uploader": {
+                            "email": "foo@chromium.org",
+                        },
+                    },
+                }
+            ]
+        )
+        mock_subprocess_run.return_value = mock_run_return_value
+        self.assertEqual(
+            llvm_next_py_autoupdate.fetch_cl_info(
+                self.toolchain_owners_with_listing(
+                    ["bar@google.com", "foo@chromium.org"]
+                ),
+                ARBITRARY_CL_URL,
+            ),
+            llvm_next_py_autoupdate.GerritCLInfo(
+                is_abandoned_or_merged=False,
+                is_uploader_a_googler=True,
+                most_recent_patch_set=123,
+            ),
+        )
 
     @contextlib.contextmanager
     def mock_fetch_cl_info(
@@ -81,6 +190,7 @@ class Test(test_helpers.TempDirTestCase):
         """Mocks `fetch_cl_info` to return `mock_cl_info` entries."""
 
         def fetch_cl_info_side_effect(
+            _owners: llvm_next_py_autoupdate.LazyToolchainOwners,
             cl: cros_cls.ChangeListURL,
         ) -> llvm_next_py_autoupdate.GerritCLInfo:
             if x := mock_cl_info.get(cl):
@@ -96,7 +206,9 @@ class Test(test_helpers.TempDirTestCase):
     def test_update_empty_urls(self):
         with self.mock_fetch_cl_info(mock_cl_info={}):
             self.assertIsNone(
-                llvm_next_py_autoupdate.update_testing_url_list(())
+                llvm_next_py_autoupdate.update_testing_url_list(
+                    self.empty_toolchain_owners(), ()
+                )
             )
 
     def test_merged_cl_is_removed_by_update(self):
@@ -112,7 +224,7 @@ class Test(test_helpers.TempDirTestCase):
                 messages,
                 new_list,
             ) = llvm_next_py_autoupdate.update_testing_url_list(
-                [str(ARBITRARY_CL_URL)]
+                self.empty_toolchain_owners(), [str(ARBITRARY_CL_URL)]
             )
             mocked_fetch.assert_called_once()
 
@@ -130,7 +242,7 @@ class Test(test_helpers.TempDirTestCase):
         with self.mock_fetch_cl_info(mock_cl_info) as mocked_fetch:
             self.assertIsNone(
                 llvm_next_py_autoupdate.update_testing_url_list(
-                    [str(ARBITRARY_CL_URL)]
+                    self.empty_toolchain_owners(), [str(ARBITRARY_CL_URL)]
                 )
             )
             mocked_fetch.assert_called_once()
@@ -149,7 +261,7 @@ class Test(test_helpers.TempDirTestCase):
                 messages,
                 new_list,
             ) = llvm_next_py_autoupdate.update_testing_url_list(
-                [str(ARBITRARY_CL_URL)]
+                self.empty_toolchain_owners(), [str(ARBITRARY_CL_URL)]
             )
             mocked_fetch.assert_called_once()
 
@@ -178,7 +290,7 @@ class Test(test_helpers.TempDirTestCase):
         with self.mock_fetch_cl_info(mock_cl_info) as mocked_fetch:
             self.assertIsNone(
                 llvm_next_py_autoupdate.update_testing_url_list(
-                    [str(ARBITRARY_CL_URL)]
+                    self.empty_toolchain_owners(), [str(ARBITRARY_CL_URL)]
                 )
             )
             mocked_fetch.assert_called_once()
@@ -291,3 +403,29 @@ class Test(test_helpers.TempDirTestCase):
             ),
         )
         self.assert_only_call_is_cros_format(mock_subprocess_run)
+
+    def test_owners_file_parsing_functions(self):
+        contents = textwrap.dedent(
+            """\
+            foo@chromium.org
+            bar@google.com
+            """
+        )
+        owners = llvm_next_py_autoupdate.parse_direct_owners_from_file(contents)
+        self.assertEqual(owners, ["foo@chromium.org", "bar@google.com"])
+
+    def test_owners_file_parsing_ignores_exciting_patterns(self):
+        contents = textwrap.dedent(
+            """\
+            # Some commentary
+            foo@chromium.org  # More commentary
+            #Even-More@Commentary
+            per-file some-file = bar@chromium.org
+            include ../OWNERS
+            # OWNERS emails can either be '*' or a valid email. Ignore the
+            # former.
+            *
+            """
+        )
+        owners = llvm_next_py_autoupdate.parse_direct_owners_from_file(contents)
+        self.assertEqual(owners, ["foo@chromium.org"])

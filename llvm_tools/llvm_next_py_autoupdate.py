@@ -19,7 +19,7 @@ import json
 import logging
 from pathlib import Path
 import subprocess
-from typing import Iterable, List, Optional, Tuple
+from typing import Iterable, List, Optional, Set, Tuple
 
 from cros_utils import cros_paths
 from cros_utils import git_utils
@@ -40,7 +40,53 @@ class GerritCLInfo:
     most_recent_patch_set: int
 
 
-def fetch_cl_info(cl: cros_cls.ChangeListURL) -> GerritCLInfo:
+def parse_direct_owners_from_file(file_contents: str) -> List[str]:
+    """Parses unrestricted OWNERS emails from the given file contents."""
+    results = []
+    for line in file_contents.splitlines():
+        no_comment = line.split("#", 1)[0].strip()
+        # Skip any lines with embedded spaces. There are many directives in
+        # OWNERS files (e.g., includes, per-file owners, etc). All we care
+        # about here is accounts _directly mentioned_ with unrestricted access.
+        if any(c.isspace() for c in no_comment):
+            continue
+        if "@" in no_comment:
+            results.append(no_comment)
+    return results
+
+
+class LazyToolchainOwners:
+    """Caches OWNERS file entries for the toolchain file.
+
+    Used to cheaply (and lossily) check to see if an @chromium email address is
+    a Googler.
+    """
+
+    def __init__(self, owners_file: Path):
+        if not owners_file.exists():
+            raise ValueError(
+                f"Handed path to nonexistent OWNERS file: {owners_file}"
+            )
+        self._owners_file = owners_file
+        self._owners: Optional[Set[str]] = None
+
+    def contains(self, email: str) -> bool:
+        """Loads OWNERS, and returns if `email` is directly mentioned in it.
+
+        Repeated calls will reuse cached results of loading OWNERS.
+        """
+        if self._owners is None:
+            self._owners = set(
+                parse_direct_owners_from_file(
+                    self._owners_file.read_text(encoding="utf-8")
+                )
+            )
+        return email in self._owners
+
+
+def fetch_cl_info(
+    toolchain_owners: LazyToolchainOwners, cl: cros_cls.ChangeListURL
+) -> GerritCLInfo:
     gerrit_stdout = subprocess.run(
         ("gerrit", "--json", "inspect", cl.gerrit_tool_id),
         check=True,
@@ -55,7 +101,8 @@ def fetch_cl_info(cl: cros_cls.ChangeListURL) -> GerritCLInfo:
     if cl_status not in ("NEW", "MERGED", "ABANDONED"):
         raise ValueError(f"Unexpected CL status on {cl}: {cl_status!r}")
 
-    current_ps_str = gerrit_info.get("currentPatchSet", {}).get("number")
+    current_ps_info = gerrit_info.get("currentPatchSet", {})
+    current_ps_str = current_ps_info.get("number")
     try:
         current_ps = int(current_ps_str)
     except ValueError:
@@ -69,17 +116,39 @@ def fetch_cl_info(cl: cros_cls.ChangeListURL) -> GerritCLInfo:
             f"{current_ps_str!r}"
         )
 
+    uploader_email = current_ps_info.get("uploader", {}).get("email")
+    if not uploader_email:
+        logging.warning(
+            "Could not determine uploader for %s; assuming non-Googler",
+            cl,
+        )
+        is_uploader_a_googler = False
+    elif uploader_email.endswith("@google.com"):
+        is_uploader_a_googler = True
+    elif uploader_email.endswith("@chromium.org") and toolchain_owners.contains(
+        uploader_email
+    ):
+        logging.info(
+            "Assuming %s is a Googler, as the email is a toolchain OWNER",
+            uploader_email,
+        )
+        is_uploader_a_googler = True
+    else:
+        logging.info(
+            "%s is neither @google nor an OWNER; assuming not-Googler",
+            uploader_email,
+        )
+        is_uploader_a_googler = False
+
     return GerritCLInfo(
         is_abandoned_or_merged=cl_status != "NEW",
-        # Unfortunately, the owner that the gerrit tool reports isn't the
-        # _uploader_ of the current patch set, so this field can't be
-        # determined at the moment: b/354943075#comment2
-        is_uploader_a_googler=False,
+        is_uploader_a_googler=is_uploader_a_googler,
         most_recent_patch_set=current_ps,
     )
 
 
 def update_testing_url_list(
+    toolchain_owners: LazyToolchainOwners,
     current_list: Iterable[str],
 ) -> Optional[Tuple[str, List[str]]]:
     new_list = []
@@ -87,7 +156,7 @@ def update_testing_url_list(
 
     for url in current_list:
         cl_url = cros_cls.ChangeListURL.parse(url)
-        cl_info = fetch_cl_info(cl_url)
+        cl_info = fetch_cl_info(toolchain_owners, cl_url)
         if cl_info.is_abandoned_or_merged:
             logging.info("%s was closed; removing from list", cl_url)
             change_descriptions.append(f"{cl_url} was closed")
@@ -184,7 +253,13 @@ def main(argv: List[str]) -> None:
     )
     opts = parser.parse_args(argv)
 
-    update_result = update_testing_url_list(llvm_next.LLVM_NEXT_TESTING_CL_URLS)
+    update_result = update_testing_url_list(
+        toolchain_owners=LazyToolchainOwners(
+            owners_file=cros_paths.script_toolchain_utils_root()
+            / "OWNERS.toolchain"
+        ),
+        current_list=llvm_next.LLVM_NEXT_TESTING_CL_URLS,
+    )
     if not update_result:
         logging.info("All URLs are up-to-date.")
         return
