@@ -54,6 +54,9 @@ CheckResult = NamedTuple(
     ),
 )
 
+# b/378723931: until py3.11 (the new default in the chroot) supports `pip`, we
+# need to run python3.8 directly
+PYTHON = "python3.8"
 
 Command = Sequence[Union[str, os.PathLike]]
 CheckResults = Union[List[Tuple[str, CheckResult]], CheckResult]
@@ -172,7 +175,7 @@ def maybe_get_or_install_mypy() -> Optional[MyPyInvocation]:
         pythonpath = m.group(1)
         return MyPyInvocation(
             command=[
-                "python3",
+                PYTHON,
                 "-m",
                 "mypy",
             ],
@@ -200,11 +203,11 @@ def get_pip() -> Optional[List[str]]:
     have_pip = can_import_py_module("pip")
     if not have_pip:
         print("Autoinstalling `pip`...")
-        subprocess.check_call(["python", "-m", "ensurepip"])
+        subprocess.check_call([PYTHON, "-m", "ensurepip"])
         have_pip = can_import_py_module("pip")
 
     if have_pip:
-        return ["python", "-m", "pip"]
+        return [PYTHON, "-m", "pip"]
     return None
 
 
@@ -968,6 +971,7 @@ def maybe_reexec_inside_chroot(
 
     args += [
         "--",
+        PYTHON,
         rebase_path(__file__),
     ]
 
@@ -978,7 +982,6 @@ def maybe_reexec_inside_chroot(
     if infer_files:
         args.append("--infer_files")
     args.extend(rebase_path(x) for x in files)
-
     if chdir_to is None:
         print("Attempting to enter the chroot...")
     else:
@@ -990,7 +993,7 @@ def maybe_reexec_inside_chroot(
 def can_import_py_module(module: str) -> bool:
     """Returns true if `import {module}` works."""
     exit_code = subprocess.call(
-        ["python3", "-c", f"import {module}"],
+        [PYTHON, "-c", f"import {module}"],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )
