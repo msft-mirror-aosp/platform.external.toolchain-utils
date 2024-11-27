@@ -165,7 +165,7 @@ class AggregatedWarnings:
     )
 
     _CWD_PACKAGE_RE = re.compile(
-        r"^(?:/build/[^/]+)?/var/(?:cache|tmp)/portage/([^/]+/[^/]+)/"
+        r"^(?:/build/[^/]+)?/(?:var/)?(?:cache|tmp)/portage/([^/]+/[^/]+)/"
     )
 
     @classmethod

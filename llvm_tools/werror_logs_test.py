@@ -251,6 +251,24 @@ class Test(test_helpers.TempDirTestCase):
             warning_info, create_warning_info({"sys-devel/llvm": len(cwds)})
         )
 
+    def test_guessing_real_packages_correctly(self):
+        # pylint: disable=line-too-long
+        aggregated = werror_logs.AggregatedWarnings()
+        cwds = (
+            "/build/amd64-generic/tmp/portage/dev-util/perf-5.15.68-r4/work/",
+            "/build/amd64-generic/tmp/portage/app-benchmarks/stress-ng-0.13.09/work/stress-ng-0.13.09",
+        )
+        for d in cwds:
+            aggregated.add_report_json(
+                {
+                    "cwd": d,
+                    "stdout": "clang-17: error: foo [-Werror,-Wfoo]",
+                }
+            )
+        self.assertEqual(len(aggregated.warnings), 1)
+        warning, _ = next(iter(aggregated.warnings.items()))
+        self.assertEqual(warning.name, "-Wfoo")
+
     def test_aggregation_raises_if_package_name_cant_be_guessed(self):
         aggregated = werror_logs.AggregatedWarnings()
         with self.assertRaises(werror_logs.UnknownPackageNameError):
