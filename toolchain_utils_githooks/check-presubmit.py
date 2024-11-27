@@ -592,7 +592,7 @@ def check_cros_lint(
 
     # We have to support users who don't have a chroot. So we either run `cros
     # lint` (if it's been made available to us), or we try a mix of
-    # pylint+golint.
+    # pylint+staticcheck.
     def try_run_cros_lint(cros_binary: str) -> Optional[CheckResult]:
         exit_code, output = run_command_unchecked(
             [cros_binary, "lint", "--"] + list(files),
@@ -647,15 +647,15 @@ def check_cros_lint(
     go_files = [f for f in remove_deleted_files(files) if f.endswith(".go")]
     if go_files:
 
-        def run_golint() -> CheckResult:
-            if has_executable_on_path("golint"):
+        def run_staticcheck() -> CheckResult:
+            if has_executable_on_path("staticcheck"):
                 return check_result_from_command(
-                    ["golint", "-set_exit_status"] + go_files
+                    ["staticcheck", "-checks", "inherit,-SA1019"] + go_files
                 )
 
             complaint = (
-                "WARNING: go linting disabled. golint is not on your $PATH.\n"
-                "Please either enter a chroot, or install go locally. "
+                "WARNING: go linting disabled. staticcheck is not on your "
+                "$PATH.\nPlease either enter a chroot, or install go locally. "
                 "Continuing."
             )
             return CheckResult(
@@ -664,7 +664,7 @@ def check_cros_lint(
                 autofix_commands=[],
             )
 
-        tasks.append(("golint", thread_pool.apply_async(run_golint)))
+        tasks.append(("staticcheck", thread_pool.apply_async(run_staticcheck)))
 
     complaint = (
         "WARNING: No ChromeOS checkout detected, and no viable CrOS tree\n"
