@@ -24,7 +24,10 @@ from llvm_tools import patch_utils
 PACKAGES_TO_COLLECT = patch_utils.CHROMEOS_PATCHES_JSON_PACKAGES
 
 # Folks who should be on the R-line of any CLs that get uploaded.
-CL_REVIEWERS = (git_utils.REVIEWER_DETECTIVE,)
+CL_REVIEWERS = (
+    git_utils.REVIEWER_DETECTIVE,
+    git_utils.REVIEWER_MAGE,
+)
 
 # Folks who should be on the CC-line of any CLs that get uploaded.
 CL_CC = ("gbiv@chromium.org",)

@@ -27,8 +27,10 @@ from llvm_tools import cros_cls
 from llvm_tools import llvm_next
 
 
-# TODO: Should this be the Mage instead?
-CL_REVIEWERS = (git_utils.REVIEWER_DETECTIVE,)
+CL_REVIEWERS = (
+    git_utils.REVIEWER_DETECTIVE,
+    git_utils.REVIEWER_MAGE,
+)
 
 
 @dataclasses.dataclass(frozen=True, eq=True)
