@@ -21,6 +21,7 @@ LLVM_NEXT_REV = 547379
 LLVM_NEXT_TESTING_CL_URLS: Iterable[str] = (
     "https://chrome-internal-review.googlesource.com/c/chromeos/manifest-internal/+/7721626/1",
     "https://crrev.com/c/5924684/3",
+    "https://crrev.com/c/6077991/5",
 )
 
 # A list of CLs that constitute the current llvm-next roll.
