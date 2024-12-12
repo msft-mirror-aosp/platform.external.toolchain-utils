@@ -130,9 +130,19 @@ func TestDoubleBuildDoesntRecompileIfNoObviousWerrorsExist(t *testing.T) {
 func TestKnownConfigureFileParsing(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
 		for _, f := range []string{"conftest.c", "conftest.cpp", "/dev/null"} {
-			if !isLikelyAConfTest(ctx.cfg, ctx.newCommand(clangX86_64, f)) {
+			if !isLikelyAConfTest(ctx, ctx.cfg, ctx.newCommand(clangX86_64, f)) {
 				t.Errorf("%q isn't considered a conf test file", f)
 			}
+		}
+	})
+}
+
+func TestKnownConfigureDirParsing(t *testing.T) {
+	withTestContext(t, func(ctx *testContext) {
+		wd := "foo/bar/CMakeFiles/CMakeScratch/TryCompile-abc123"
+		ctx.wd = wd
+		if !isLikelyAConfTest(ctx, ctx.cfg, ctx.newCommand(clangX86_64, "foo.c")) {
+			t.Errorf("%q isn't considered a conf test pwd", wd)
 		}
 	})
 }

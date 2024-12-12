@@ -104,10 +104,16 @@ func disableWerrorFlags(originalArgs, extraFlags []string) []string {
 	return append(newArgs, allExtraFlags...)
 }
 
-func isLikelyAConfTest(cfg *config, cmd *command) bool {
+func isLikelyAConfTest(env env, cfg *config, cmd *command) bool {
 	// Android doesn't do mid-build `configure`s, so we don't need to worry about this there.
 	if cfg.isAndroidWrapper {
 		return false
+	}
+
+	// Ignore anything that's likely to be a cmake configuration step. These put the compiler
+	// into a TryCompile dir.
+	if strings.Contains(env.getwd(), "CMakeFiles/CMakeScratch/TryCompile-") {
+		return true
 	}
 
 	for _, a := range cmd.Args {
@@ -176,7 +182,7 @@ func doubleBuildWithWNoError(env env, cfg *config, originalCmd *command, werrorC
 	// The only way we can do anything useful is if it looks like the failure
 	// was -Werror-related.
 	retryWithExtraFlags := []string{}
-	if originalExitCode != 0 && !isLikelyAConfTest(cfg, originalCmd) {
+	if originalExitCode != 0 && !isLikelyAConfTest(env, cfg, originalCmd) {
 		retryWithExtraFlags = getWnoErrorFlags(originalStdoutBuffer.Bytes(), originalStderrBuffer.Bytes())
 	}
 	if len(retryWithExtraFlags) == 0 {

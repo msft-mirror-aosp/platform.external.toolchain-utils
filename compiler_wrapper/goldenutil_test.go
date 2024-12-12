@@ -195,6 +195,9 @@ func writeGoldenRecords(ctx *testContext, writer io.Writer, records []goldenReco
 		}
 		return strings.ReplaceAll(asString, ctx.tempDir, stableTempDir)
 	})
+	if err != nil {
+		ctx.t.Fatalf("transforming JSON values: %v", err)
+	}
 
 	encoder := json.NewEncoder(writer)
 	encoder.SetIndent("", "  ")
