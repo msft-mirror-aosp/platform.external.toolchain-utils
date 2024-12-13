@@ -268,9 +268,8 @@ def main(argv: List[str]) -> None:
 
     change_descriptions, new_url_list = update_result
     logging.info("URL list changed; creating commit...")
-    with git_utils.create_worktree(
-        cros_paths.script_toolchain_utils_root()
-    ) as worktree:
+    toolchain_utils_root = cros_paths.script_toolchain_utils_root()
+    with git_utils.create_worktree(toolchain_utils_root) as worktree:
         write_url_list(worktree / "llvm_tools" / "llvm_next.py", new_url_list)
         sha = git_utils.commit_all_changes(
             worktree,
@@ -296,4 +295,4 @@ def main(argv: List[str]) -> None:
                 reviewers=CL_REVIEWERS,
             )
             for cl in cl_list:
-                git_utils.try_set_autosubmit_labels(worktree, cl)
+                git_utils.try_set_autosubmit_labels(toolchain_utils_root, cl)
