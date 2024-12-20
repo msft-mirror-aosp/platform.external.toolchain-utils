@@ -38,6 +38,13 @@ CRONJOB_TURNDOWN_TIME_HOURS = 7 * 24
 # single diagnostic. Lines may be reflowed.
 Complaint = List[str]
 
+# Iterable of milestones to skip monitoring for. Once a milestone leaves
+# stable, it can be removed from this.
+SKIP_MILESTONES = (
+    # b/384142128#comment33
+    131,
+)
+
 
 class ProfileArch(enum.Enum):
     """The arch of a Chrome AFDO profile."""
@@ -285,6 +292,13 @@ def check_cwp_profiles_are_new(
     """
     complaints = {}
     for channel, branch in branches:
+        if branch.release_number in SKIP_MILESTONES:
+            logging.warning(
+                "Release M%d is marked as skipped; ignoring CWP profiles.",
+                branch.release_number,
+            )
+            continue
+
         logging.info(
             "Monitoring CWP profiles for M%s (%s)",
             branch.release_number,
@@ -478,6 +492,13 @@ def check_afdo_profiles_are_new(
     """
     complaints = {}
     for channel, branch in branches:
+        if branch.release_number in SKIP_MILESTONES:
+            logging.warning(
+                "Release M%d is marked as skipped; ignoring AFDO profiles.",
+                branch.release_number,
+            )
+            continue
+
         logging.info(
             "Monitoring landed AFDO profiles for M%s (%s)",
             branch.release_number,
