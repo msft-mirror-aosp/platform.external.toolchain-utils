@@ -231,6 +231,7 @@ def main(sys_argv: List[str]) -> None:
         llvm_project_base_commit.write_base_changes(
             toolchain_utils_dir,
             args.llvm_dir,
+            svn_revision,
             chromiumos_overlay,
         )
         logging.info(
@@ -240,6 +241,7 @@ def main(sys_argv: List[str]) -> None:
         llvm_project_base_commit.make_base_commit(
             toolchain_utils_dir,
             args.llvm_dir,
+            svn_revision,
             chromiumos_overlay,
         )
         logging.info("Committed base commit.")

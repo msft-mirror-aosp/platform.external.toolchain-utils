@@ -54,18 +54,26 @@ TEST=CQ
 
 
 def make_base_commit(
-    toolchain_utils_dir: Path, llvm_src_dir: Path, chromiumos_overlay: Path
+    toolchain_utils_dir: Path,
+    llvm_src_dir: Path,
+    llvm_svn_revision: int,
+    chromiumos_overlay: Path,
 ) -> None:
     """Create a commit which represents the base of a ChromeOS branch.
 
     Internally this is just `write_base_changes` followed by `commit_all`.
     """
-    write_base_changes(toolchain_utils_dir, llvm_src_dir, chromiumos_overlay)
+    write_base_changes(
+        toolchain_utils_dir, llvm_src_dir, llvm_svn_revision, chromiumos_overlay
+    )
     git_utils.commit_all_changes(llvm_src_dir, BASE_COMMIT_MESSAGE)
 
 
 def write_base_changes(
-    toolchain_utils_dir: Path, llvm_src_dir: Path, chromiumos_overlay: Path
+    toolchain_utils_dir: Path,
+    llvm_src_dir: Path,
+    llvm_svn_revision: int,
+    chromiumos_overlay: Path,
 ) -> None:
     """Make changes which represents the base of a ChromeOS branch."""
     toolchain_utils_copy_files = (
@@ -76,15 +84,18 @@ def write_base_changes(
         shutil.copy(toolchain_utils_dir / copy_file, llvm_src_dir / copy_file)
     (llvm_src_dir / "PRESUBMIT.cfg").write_text(PRESUBMIT_CFG_CONTENTS)
     write_all_gentoo_cmake_hacks(llvm_src_dir, chromiumos_overlay)
-    set_up_cros_dir(llvm_src_dir)
+    set_up_cros_dir(llvm_src_dir, llvm_svn_revision)
 
 
-def set_up_cros_dir(llvm_src_dir: Path) -> None:
+def set_up_cros_dir(llvm_src_dir: Path, llvm_svn_revision: int) -> None:
     """Create and init the llvm-project/cros directory."""
     cros_dir = llvm_src_dir / "cros"
     cros_dir.mkdir()
     readme = cros_dir / "README.md"
     readme.write_text(CROS_DIR_README)
+
+    llvm_base_rev = cros_dir / "llvm-rev"
+    llvm_base_rev.write_text(str(llvm_svn_revision))
 
 
 def write_gentoo_cmake_hack(llvm_src_dir: Path, ebuild_dir: Path) -> None:

@@ -82,6 +82,7 @@ def verify_in_worktree(
         llvm_project_base_commit.make_base_commit(
             toolchain_utils_dir,
             worktree_dir,
+            svn_revision,
             chromiumos_overlay,
         )
         try:

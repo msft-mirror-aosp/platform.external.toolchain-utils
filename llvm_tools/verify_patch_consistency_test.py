@@ -183,7 +183,9 @@ class TestVerifyPatchConsistency(test_helpers.TempDirTestCase):
         if self.git_utils_patcher:
             self.git_utils_patcher.stop()
 
-    def _run_llvm_harness(self, tempdir: Path, runner: Callable):
+    def _run_llvm_harness(
+        self, tempdir: Path, llvm_svn_revision: int, runner: Callable
+    ):
         """Set up for full verification tests."""
 
         # Set up directories and paths.
@@ -260,6 +262,7 @@ class TestVerifyPatchConsistency(test_helpers.TempDirTestCase):
         llvm_project_base_commit.make_base_commit(
             fake_toolchain_utils,
             fake_llvm_src_dir,
+            llvm_svn_revision,
             chromiumos_overlay=fake_chromiumos_overlay,
         )
         a_file.write_text("hello world", encoding="utf-8")
@@ -283,6 +286,7 @@ class TestVerifyPatchConsistency(test_helpers.TempDirTestCase):
     def test_failed_verification(self):
         """Test we can catch a bad patch stack."""
         tempdir = self.make_tempdir()
+        svn_revision = 1234
 
         def _runner(args: _RunnerArgs):
             # Actually run the (failing) verification.
@@ -299,18 +303,19 @@ class TestVerifyPatchConsistency(test_helpers.TempDirTestCase):
                         llvm_src_dir=args.llvm_src_dir,
                         patches_json=args.patches_json,
                         chromiumos_overlay=args.chromiumos_overlay,
-                        svn_revision=1234,
+                        svn_revision=svn_revision,
                         cl_ref=args.main_sha,
                     )
                 )
             finally:
                 self._stop_mocking()
 
-        self._run_llvm_harness(tempdir, _runner)
+        self._run_llvm_harness(tempdir, svn_revision, _runner)
 
     def test_successful_verification(self):
         """Test we can successfully verify a patch stack."""
         tempdir = self.make_tempdir()
+        svn_revision = 1234
 
         def _runner(args: _RunnerArgs):
             # Actually run the verification. Notably,
@@ -328,11 +333,11 @@ class TestVerifyPatchConsistency(test_helpers.TempDirTestCase):
                         llvm_src_dir=args.llvm_src_dir,
                         patches_json=args.patches_json,
                         chromiumos_overlay=args.chromiumos_overlay,
-                        svn_revision=1234,
+                        svn_revision=svn_revision,
                         cl_ref=args.patch_branch,
                     )
                 )
             finally:
                 self._stop_mocking()
 
-        self._run_llvm_harness(tempdir, _runner)
+        self._run_llvm_harness(tempdir, svn_revision, _runner)
