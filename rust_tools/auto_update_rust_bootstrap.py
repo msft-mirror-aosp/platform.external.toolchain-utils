@@ -385,6 +385,37 @@ def set_rust_bootstrap_prebuilt_use(
     )
 
 
+def build_commit_message_for_new_prebuilts(
+    versions_updated: List[Tuple[EbuildVersion, Optional[str]]]
+) -> str:
+    """Builds a commit message for adding new prebuilts."""
+    pretty_artifact_lines = []
+    for version, maybe_gs_path in versions_updated:
+        if maybe_gs_path:
+            pretty_artifact_lines.append(
+                f"- rust-bootstrap-{version.without_rev()} => {maybe_gs_path}"
+            )
+        else:
+            pretty_artifact_lines.append(
+                f"- rust-bootstrap-{version.without_rev()} was already on "
+                "localmirror"
+            )
+
+    pretty_artifacts = "artifact" if len(versions_updated) == 1 else "artifacts"
+    commit_message_lines = [
+        "rust-bootstrap: use prebuilts",
+        "",
+        f"This CL used the following rust-bootstrap {pretty_artifacts}:",
+    ]
+    commit_message_lines += pretty_artifact_lines
+    commit_message_lines += (
+        "",
+        f"BUG={TRACKING_BUG}",
+        "TEST=CQ",
+    )
+    return "\n".join(commit_message_lines)
+
+
 def maybe_add_newest_prebuilts(
     copy_rust_bootstrap_script: Path,
     chromiumos_overlay: Path,
@@ -449,34 +480,10 @@ def maybe_add_newest_prebuilts(
     # updates for all ebuilds in the same package.
     update_ebuild_manifest(uprevved_ebuild)
 
-    pretty_artifact_lines = []
-    for version, maybe_gs_path in versions_updated:
-        if maybe_gs_path:
-            pretty_artifact_lines.append(
-                f"- rust-bootstrap-{version.without_rev()} => {maybe_gs_path}"
-            )
-        else:
-            pretty_artifact_lines.append(
-                f"- rust-bootstrap-{version.without_rev()} was already on "
-                "localmirror"
-            )
-
-    pretty_artifacts = "\n".join(pretty_artifact_lines)
-
     logging.info("Committing changes.")
     git_utils.commit_all_changes(
         chromiumos_overlay,
-        message=textwrap.dedent(
-            f"""\
-            rust-bootstrap: use prebuilts
-
-            This CL used the following rust-bootstrap artifacts:
-            {pretty_artifacts}
-
-            BUG={TRACKING_BUG}
-            TEST=CQ
-            """
-        ),
+        message=build_commit_message_for_new_prebuilts(versions_updated),
     )
     return True
 

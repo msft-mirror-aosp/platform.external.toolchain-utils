@@ -405,3 +405,51 @@ class Test(unittest.TestCase):
             auto_update_rust_bootstrap.maybe_delete_old_rust_bootstrap_ebuilds(
                 tempdir, rust_bootstrap, dry_run=True
             )
+
+    def test_prebuilt_commit_message_generation_with_one_update(self):
+        msg = auto_update_rust_bootstrap.build_commit_message_for_new_prebuilts(
+            [
+                (
+                    auto_update_rust_bootstrap.EbuildVersion(1, 70, 0, 0),
+                    "gs://some/path",
+                )
+            ]
+        )
+        self.assertEqual(
+            msg,
+            textwrap.dedent(
+                f"""\
+            rust-bootstrap: use prebuilts
+
+            This CL used the following rust-bootstrap artifact:
+            - rust-bootstrap-1.70.0 => gs://some/path
+
+            BUG={auto_update_rust_bootstrap.TRACKING_BUG}
+            TEST=CQ"""
+            ),
+        )
+
+    def test_prebuilt_commit_message_generation_with_multiple_updates(self):
+        msg = auto_update_rust_bootstrap.build_commit_message_for_new_prebuilts(
+            [
+                (
+                    auto_update_rust_bootstrap.EbuildVersion(1, 70, 0, 0),
+                    "gs://some/path",
+                ),
+                (auto_update_rust_bootstrap.EbuildVersion(1, 71, 1, 0), None),
+            ]
+        )
+        self.assertEqual(
+            msg,
+            textwrap.dedent(
+                f"""\
+            rust-bootstrap: use prebuilts
+
+            This CL used the following rust-bootstrap artifacts:
+            - rust-bootstrap-1.70.0 => gs://some/path
+            - rust-bootstrap-1.71.1 was already on localmirror
+
+            BUG={auto_update_rust_bootstrap.TRACKING_BUG}
+            TEST=CQ"""
+            ),
+        )
