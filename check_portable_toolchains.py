@@ -15,7 +15,6 @@ import os
 from pathlib import Path
 import re
 import subprocess
-import sys
 import tempfile
 from typing import List, Optional, Tuple
 
@@ -162,7 +161,9 @@ def _autodetect_latest_llvm_next_sdk_version() -> str:
             "1",
             "-status",
             "success",
-            "chromeos/infra/build-chromiumos-sdk-llvm-next",
+            "-t",
+            "toolchain:non-cq-llvm-next-testing",
+            "chromeos/staging/staging-build-chromiumos-sdk",
         ],
         check=True,
         stdin=subprocess.DEVNULL,
