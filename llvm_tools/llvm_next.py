@@ -21,7 +21,6 @@ LLVM_NEXT_REV = 547379
 LLVM_NEXT_TESTING_CL_URLS: Iterable[str] = (
     "https://crrev.com/i/7721626/28",
     "https://crrev.com/c/6191763/1",
-    "https://crrev.com/c/6221665/4",
 )
 
 # A list of CLs that constitute the current llvm-next roll.
