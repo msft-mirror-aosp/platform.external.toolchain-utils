@@ -19,7 +19,7 @@ LLVM_NEXT_REV = 547379
 # llvm_next_py_autoupdate.py.
 # pylint: disable=line-too-long
 LLVM_NEXT_TESTING_CL_URLS: Iterable[str] = (
-    "https://crrev.com/i/7721626/28",
+    "https://crrev.com/i/7721626/36",
     "https://crrev.com/c/6191763/1",
 )
 
