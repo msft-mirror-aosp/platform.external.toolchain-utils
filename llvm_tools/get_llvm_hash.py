@@ -405,6 +405,9 @@ def GetLLVMHashAndVersionFromSVNOption(
 def GetCrOSCurrentLLVMHash(chromeos_root: Path) -> str:
     """Retrieves the current ChromeOS LLVM hash.
 
+    Specifically, this returns the _upstream_ hash that ChromeOS' LLVM is based
+    on.
+
     Args:
         chromeos_root: A ChromeOS source tree root.
 
@@ -416,7 +419,27 @@ def GetCrOSCurrentLLVMHash(chromeos_root: Path) -> str:
     assert chroot.IsChromeOSRoot(
         chromeos_root
     ), f"{chromeos_root} isn't the root of a ChromeOS checkout"
-    return manifest_utils.extract_current_llvm_hash(chromeos_root)
+    llvm_project = chromeos_root / cros_paths.LLVM_PROJECT
+    hash_or_ref = manifest_utils.extract_current_llvm_hash_or_ref(chromeos_root)
+    refs_heads = "refs/heads/"
+    # If this is a hash, we're done.
+    if not hash_or_ref.startswith(refs_heads):
+        return hash_or_ref
+
+    # Otherwise, find the `merge-base` between upstream and what we have.
+    ref = hash_or_ref[len(refs_heads) :]
+    cros_ref = f"{cros_llvm_repo.UPSTREAM_REMOTE}/{ref}"
+    llvm_repo = GetCachedUpToDateReadOnlyLLVMRepo()
+    llvm_upstream_main = f"{llvm_repo.remote}/{llvm_repo.upstream_main}"
+    merge_base = git_utils.merge_base(
+        llvm_repo.path,
+        [cros_ref, llvm_upstream_main],
+    )
+    if not merge_base:
+        raise ValueError(
+            f"Can't find a merge-base between {cros_ref} and {llvm_upstream_main}"
+        )
+    return merge_base
 
 
 class LLVMHash:
@@ -468,7 +491,11 @@ class LLVMHash:
         return GetCrOSCurrentLLVMHash(chromeos_tree)
 
     def GetCrOSLLVMNextHash(self) -> str:
-        """Retrieves the current ChromeOS llvm-next hash."""
+        """Retrieves the current ChromeOS llvm-next hash.
+
+        Specifically, this returns the _upstream_ hash that ChromeOS' LLVM-next
+        is based on.
+        """
         return llvm_next.LLVM_NEXT_HASH
 
     def GetGoogle3LLVMHash(self) -> str:

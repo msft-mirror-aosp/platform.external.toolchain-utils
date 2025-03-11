@@ -53,7 +53,7 @@ def _find_llvm_project_in_manifest_tree(
     return None
 
 
-def extract_current_llvm_hash(src_tree: Path) -> str:
+def extract_current_llvm_hash_or_ref(src_tree: Path) -> str:
     """Returns the current LLVM SHA for the CrOS tree rooted at `src_tree`.
 
     Raises:
@@ -62,10 +62,12 @@ def extract_current_llvm_hash(src_tree: Path) -> str:
     xmlroot = ElementTree.parse(
         get_chromeos_manifest_path(src_tree), parser=make_xmlparser()
     ).getroot()
-    return extract_current_llvm_hash_from_xml(xmlroot)
+    return extract_current_llvm_hash_or_ref_from_xml(xmlroot)
 
 
-def extract_current_llvm_hash_from_xml(xmlroot: ElementTree.Element) -> str:
+def extract_current_llvm_hash_or_ref_from_xml(
+    xmlroot: ElementTree.Element,
+) -> str:
     """Returns the current LLVM SHA for the parsed XML file.
 
     Raises:

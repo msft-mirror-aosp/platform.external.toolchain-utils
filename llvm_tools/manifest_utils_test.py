@@ -82,6 +82,6 @@ class TestManifestUtils(unittest.TestCase):
             parser=manifest_utils.make_xmlparser(),
         )
         self.assertEqual(
-            manifest_utils.extract_current_llvm_hash_from_xml(root),
+            manifest_utils.extract_current_llvm_hash_or_ref_from_xml(root),
             "abcd",
         )
