@@ -471,14 +471,20 @@ def check_py_format(
     files: Iterable[str],
 ) -> CheckResults:
     """Runs black on files to check for style bugs. Also checks for #!s."""
-    black = "black"
-    if not has_executable_on_path(black):
-        return CheckResult(
-            ok=False,
-            output="black isn't available on your $PATH. Please either "
-            "enter a chroot, or place depot_tools on your $PATH.",
-            autofix_commands=[],
-        )
+    # Prefer the `black` that ships with chromite first, as that's properly
+    # version-controlled.
+    black = os.path.normpath(
+        os.path.join(toolchain_utils_root, "../../../chromite/scripts/black")
+    )
+    if not os.path.exists(black):
+        black = "black"
+        if not has_executable_on_path(black):
+            return CheckResult(
+                ok=False,
+                output="black isn't available on your $PATH. Please either "
+                "enter a chroot, or place depot_tools on your $PATH.",
+                autofix_commands=[],
+            )
 
     python_files = [f for f in remove_deleted_files(files) if f.endswith(".py")]
     if not python_files:
@@ -1170,7 +1176,7 @@ def main(argv: List[str]) -> int:
     spawn_print_lock = threading.RLock()
 
     def run_check(
-        arg: Tuple[str, CheckFn, Iterable[str]]
+        arg: Tuple[str, CheckFn, Iterable[str]],
     ) -> Optional[Tuple[str, CheckResults]]:
         name, check_fn, files = arg
         with spawn_print_lock:
