@@ -596,12 +596,18 @@ def check_cros_lint(
 
     fixed_env = env_with_pythonpath(toolchain_utils_root)
 
+    # b/404578092: if `cros lint` is given absolute paths, it may skip
+    # linting for reasons that are unclear as of the time of writing.
+    # Just give it relative paths, since it's already invoked
+    # from toolchain_utils_root.
+    fixed_files = [os.path.relpath(x, toolchain_utils_root) for x in files]
+
     # We have to support users who don't have a chroot. So we either run `cros
     # lint` (if it's been made available to us), or we try a mix of
     # pylint+staticcheck.
     def try_run_cros_lint(cros_binary: str) -> Optional[CheckResult]:
         exit_code, output = run_command_unchecked(
-            [cros_binary, "lint", "--"] + list(files),
+            [cros_binary, "lint", "--"] + fixed_files,
             toolchain_utils_root,
             env=fixed_env,
         )
