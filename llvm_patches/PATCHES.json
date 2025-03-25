@@ -283,5 +283,226 @@
       "from": 530567,
       "until": null
     }
+  },
+  {
+    "metadata": {
+      "info": [],
+      "title": "[lldb] Add terminfo dependency for ncurses support"
+    },
+    "platforms": [
+      "chromiumos"
+    ],
+    "rel_patch_path": "-lldb-Add-terminfo-dependency-for-ncurses-support.patch",
+    "version_range": {
+      "from": 537678,
+      "until": 566148
+    }
+  },
+  {
+    "metadata": {
+      "info": [],
+      "original_sha": "815bf0f190383e14068f191bb0d16d62fbb6f8b3",
+      "title": "Revert \"[Clang] [Test] Use lit Syntax for Environment Variables in Clang subproject\" (#106267)"
+    },
+    "platforms": [
+      "chromiumos"
+    ],
+    "rel_patch_path": "cherry/815bf0f190383e14068f191bb0d16d62fbb6f8b3.patch",
+    "version_range": {
+      "from": 547155,
+      "until": 547783
+    }
+  },
+  {
+    "metadata": {
+      "info": [],
+      "original_sha": "e3ce979f1b3ac1e7f2d0261d3abffbd12064eae6",
+      "title": "Revert \"[clang] Increase the default expression nesting limit (#104717)\""
+    },
+    "platforms": [
+      "chromiumos"
+    ],
+    "rel_patch_path": "cherry/e3ce979f1b3ac1e7f2d0261d3abffbd12064eae6.patch",
+    "version_range": {
+      "from": 546878,
+      "until": 547382
+    }
+  },
+  {
+    "metadata": {
+      "info": [],
+      "original_sha": "fd7904a07bc26950fa7735fb6871a064e3ebc836",
+      "title": "Revert \"[lldb] Speculative fix for trap_frame_sym_ctx.test\""
+    },
+    "platforms": [
+      "chromiumos"
+    ],
+    "rel_patch_path": "cherry/fd7904a07bc26950fa7735fb6871a064e3ebc836.patch",
+    "version_range": {
+      "from": 547186,
+      "until": 547400
+    }
+  },
+  {
+    "metadata": {
+      "info": [],
+      "original_sha": "9671ed1afcd1e3aab754a9b905d511ffd52f3624",
+      "title": "Revert \"LSV: forbid load-cycles when vectorizing; fix bug (#104815)\" (#106245)"
+    },
+    "platforms": [
+      "chromiumos"
+    ],
+    "rel_patch_path": "cherry/9671ed1afcd1e3aab754a9b905d511ffd52f3624.patch",
+    "version_range": {
+      "from": 547233,
+      "until": 547704
+    }
+  },
+  {
+    "metadata": {
+      "info": [],
+      "original_sha": "438ad9f2bf25575c474313de4ad85a5da6f69e4c",
+      "title": "[clang-format] Revert \"[clang-format][NFC] Delete TT_LambdaArrow (#70\u2026 (#105923)"
+    },
+    "platforms": [
+      "chromiumos"
+    ],
+    "rel_patch_path": "cherry/438ad9f2bf25575c474313de4ad85a5da6f69e4c.patch",
+    "version_range": {
+      "from": 516925,
+      "until": 547893
+    }
+  },
+  {
+    "metadata": {
+      "info": [],
+      "title": "Partial Revert \"[Driver] Support using toolchain libc and libc++ for baremetal (#96736)\""
+    },
+    "platforms": [
+      "chromiumos"
+    ],
+    "rel_patch_path": "Partial-Revert-Driver-Support-using-toolchain-libc-and-libc-for-baremetal-96736-.patch",
+    "version_range": {
+      "from": 547379,
+      "until": null
+    }
+  },
+  {
+    "metadata": {
+      "info": [],
+      "original_sha": "d29a50f358e71a695b23e456d66ed2924617deb9",
+      "title": "Revert \"[lldb] Allow fetching of RA register when above fault handler (#98566)\""
+    },
+    "platforms": [
+      "chromiumos"
+    ],
+    "rel_patch_path": "cherry/d29a50f358e71a695b23e456d66ed2924617deb9.patch",
+    "version_range": {
+      "from": 542750,
+      "until": 556712
+    }
+  },
+  {
+    "metadata": {
+      "info": [],
+      "original_sha": "412e1af19a248fd5650e6828695c78454a9195fb",
+      "title": "Revert \"[AArch64] Lower alias mask to a whilewr\" (#120261)"
+    },
+    "platforms": [
+      "chromiumos"
+    ],
+    "rel_patch_path": "cherry/412e1af19a248fd5650e6828695c78454a9195fb.patch",
+    "version_range": {
+      "from": 545094,
+      "until": 560071
+    }
+  },
+  {
+    "metadata": {
+      "info": [],
+      "title": "cros: add llvm-rev file"
+    },
+    "platforms": [
+      "chromiumos"
+    ],
+    "rel_patch_path": "cros-add-llvm-rev-file.patch",
+    "version_range": {
+      "from": null,
+      "until": null
+    }
+  },
+  {
+    "metadata": {
+      "info": [],
+      "original_sha": "d2aff182d379c9b84cebe0fdf58907f4de768f1e",
+      "title": "Revert \"TLS loads opimization (hoist)\" (#114740)"
+    },
+    "platforms": [
+      "chromiumos"
+    ],
+    "rel_patch_path": "cherry/d2aff182d379c9b84cebe0fdf58907f4de768f1e.patch",
+    "version_range": {
+      "from": 455363,
+      "until": 555342
+    }
+  },
+  {
+    "metadata": {
+      "info": [],
+      "original_sha": "3ef64f7ab5b8651eab500cd944984379fce5f639",
+      "title": "Revert \"Enable logf128 constant folding for hosts with 128bit long double (#104929)\""
+    },
+    "platforms": [
+      "chromiumos"
+    ],
+    "rel_patch_path": "cherry/3ef64f7ab5b8651eab500cd944984379fce5f639.patch",
+    "version_range": {
+      "from": 547379,
+      "until": 547478
+    }
+  },
+  {
+    "metadata": {
+      "info": [],
+      "title": "Revert \"[lldb] Add terminfo dependency for ncurses support\""
+    },
+    "platforms": [
+      "chromiumos"
+    ],
+    "rel_patch_path": "Revert-lldb-Add-terminfo-dependency-for-ncurses-support-.patch",
+    "version_range": {
+      "from": 537678,
+      "until": 566148
+    }
+  },
+  {
+    "metadata": {
+      "info": [],
+      "original_sha": "8fff0c181f26a5e8b2344c061ebf2559118b1160",
+      "title": "[lldb] Add terminfo dependency for ncurses support (#126810)"
+    },
+    "platforms": [
+      "chromiumos"
+    ],
+    "rel_patch_path": "cherry/8fff0c181f26a5e8b2344c061ebf2559118b1160.patch",
+    "version_range": {
+      "from": 537678,
+      "until": 565379
+    }
+  },
+  {
+    "metadata": {
+      "info": [],
+      "original_sha": "bb6a273d9ab9ee90dbb957e541f4d810fffb22ee",
+      "title": "[lldb] Fix manual CURSES_LIBRARIES tinfo finding (#128245)"
+    },
+    "platforms": [
+      "chromiumos"
+    ],
+    "rel_patch_path": "cherry/bb6a273d9ab9ee90dbb957e541f4d810fffb22ee.patch",
+    "version_range": {
+      "from": 537678,
+      "until": 566148
+    }
   }
 ]
