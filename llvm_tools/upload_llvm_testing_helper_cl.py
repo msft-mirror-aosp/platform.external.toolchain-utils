@@ -43,9 +43,10 @@ cros_pre_src_configure_disable_werror() {
 # Text to add to the bottom of `profiles/base/use.force`.
 USE_FORCE_BLOCK = r"""
 
-# Force patch disabling, rather than failing to build LLVM and its subpackages.
-# Without this, we'll lose signal on builders where any patch fails to apply.
-continue-on-patch-failure
+# Allow PGO profile mismatches to continue silently. Without this, LLVM builds
+# will fail unless a PGO profile has been generated (which shouldn't be
+# blocking until we're ready to land llvm-next).
+allow-pgo-mismatch
 """
 
 COMMIT_MESSAGE = """\
