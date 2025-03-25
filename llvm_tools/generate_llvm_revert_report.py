@@ -21,7 +21,6 @@ import sys
 from typing import List, Set, TextIO
 
 from cros_utils import cros_paths
-from llvm_tools import chroot
 from llvm_tools import get_llvm_hash
 from llvm_tools import revert_checker
 
@@ -79,6 +78,10 @@ def write_reverts_as_csv(write_to: TextIO, reverts: List[RevertInfo]):
 
 
 def main(argv: List[str]):
+    # `cros_root` is hardcoded here, since:
+    # - this one only reads tree state, and
+    # - the person/automation invoking it is almost definitely invoking it _in
+    #   the tree that it should run in_.
     cros_root = cros_paths.script_chromiumos_checkout_or_exit()
 
     logging.basicConfig(
@@ -104,12 +107,6 @@ def main(argv: List[str]):
         "--llvm-next", action="store_true", help="Use the llvm-next hash"
     )
     parser.add_argument(
-        "--overlay-dir",
-        help="Path to chromiumos-overlay",
-        type=Path,
-        default=cros_root / cros_paths.CHROMIUMOS_OVERLAY,
-    )
-    parser.add_argument(
         "--llvm-head",
         default="cros/upstream/main",
         help="ref to treat as 'origin/main' in the given LLVM dir.",
@@ -119,14 +116,12 @@ def main(argv: List[str]):
     if opts.llvm_next:
         llvm_sha = get_llvm_hash.LLVMHash().GetCrOSLLVMNextHash()
     else:
-        llvm_sha = get_llvm_hash.LLVMHash().GetCrOSCurrentLLVMHash(
-            chroot.FindChromeOSRootAbove(opts.overlay_dir),
-        )
+        llvm_sha = get_llvm_hash.LLVMHash().GetCrOSCurrentLLVMHash(cros_root)
 
     logging.info("Resolved %r as the LLVM SHA to check.", llvm_sha)
 
     in_tree_cherrypicks = list_upstream_cherrypicks(
-        opts.overlay_dir / "sys-devel" / "llvm" / "files" / "PATCHES.json"
+        cros_root / cros_paths.DEFAULT_PATCHES_PATH
     )
     logging.info("Identified %d local cherrypicks.", len(in_tree_cherrypicks))
 
