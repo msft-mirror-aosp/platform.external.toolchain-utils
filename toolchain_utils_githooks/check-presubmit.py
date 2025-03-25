@@ -82,6 +82,9 @@ MYPY_CHECKED_PATHS = (
     "toolchain_utils_githooks/check-presubmit.py",
 )
 
+# Path to the script that lints changes to ${toolchain_utils}/llvm_patches.
+LINT_LLVM_PATCHES_SCRIPT = "llvm_tools/lint_llvm_patches.py"
+
 
 def run_command_unchecked(
     command: Command,
@@ -1068,6 +1071,35 @@ def infer_files_from_env_or_die(toolchain_utils_root: Path) -> List[str]:
     ]
 
 
+def files_that_modify_patches_checks(
+    toolchain_utils_root: str, files: List[str]
+) -> List[str]:
+    llvm_patches = os.path.join(toolchain_utils_root, "llvm_patches/")
+    return [
+        x
+        for x in files
+        if x.startswith(llvm_patches) or x.endswith(LINT_LLVM_PATCHES_SCRIPT)
+    ]
+
+
+def check_patches_subdir(
+    toolchain_utils_root: str,
+    _thread_pool: multiprocessing.pool.ThreadPool,
+    _files: Iterable[str],
+) -> CheckResult:
+    check_script = (
+        Path(toolchain_utils_root) / "py" / "bin" / LINT_LLVM_PATCHES_SCRIPT
+    )
+    return_code, stdstreams = run_command_unchecked(
+        [check_script], cwd=toolchain_utils_root
+    )
+    return CheckResult(
+        ok=return_code == 0,
+        output=stdstreams,
+        autofix_commands=[],
+    )
+
+
 def main(argv: List[str]) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -1171,6 +1203,9 @@ def main(argv: List[str]) -> int:
             files,
         ),
     ]
+
+    if x := files_that_modify_patches_checks(toolchain_utils_root, files):
+        checks.append(("check_patches_subdir", check_patches_subdir, x))
 
     # NOTE: As mentioned above, checks can block on threads they spawn in this
     # pool, so we need at least len(checks)+1 threads to avoid deadlock. Use *2
