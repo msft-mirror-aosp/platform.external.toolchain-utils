@@ -34,7 +34,9 @@ HUNK_HEADER_RE = re.compile(r"^@@\s+-(\d+),(\d+)\s+\+(\d+),(\d+)\s+@@")
 HUNK_END_RE = re.compile(r"^--\s*$")
 PATCH_SUBFILE_HEADER_RE = re.compile(r"^\+\+\+ [ab]/(.*)$")
 
-CHROMEOS_PATCHES_JSON_PACKAGES = (
+# A list of all packages in chromiumos-overlay that deploy subsets of the LLVM
+# source tree we ship.
+CHROMEOS_LLVM_SUBPACKAGES = (
     "dev-util/lldb-server",
     "sys-devel/llvm",
     "sys-libs/compiler-rt",

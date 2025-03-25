@@ -103,7 +103,6 @@ class _RunnerArgs:
 
 
 class TestVerifyPatchConsistency(test_helpers.TempDirTestCase):
-
     """Test verify_patch_consistency."""
 
     def __init__(self, *nargs, **kwargs):
@@ -206,7 +205,7 @@ class TestVerifyPatchConsistency(test_helpers.TempDirTestCase):
         (fake_toolchain_utils / "OWNERS.toolchain").touch()
         fake_patches_json_path = tempdir / "PATCHES.json"
         fake_chromiumos_overlay = tempdir / "chromiumos-overlay"
-        for p in patch_utils.CHROMEOS_PATCHES_JSON_PACKAGES:
+        for p in patch_utils.CHROMEOS_LLVM_SUBPACKAGES:
             package_name = os.path.basename(p)
             live_ebuild = (
                 fake_chromiumos_overlay / p / f"{package_name}-9999.ebuild"

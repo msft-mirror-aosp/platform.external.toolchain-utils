@@ -147,7 +147,7 @@ def write_all_gentoo_cmake_hacks(
     llvm_src_dir: Path, chromiumos_overlay: Path
 ) -> None:
     """Writes gentoo cmake hacks for all known LLVM 9999 subprojects."""
-    for subproject in patch_utils.CHROMEOS_PATCHES_JSON_PACKAGES:
+    for subproject in patch_utils.CHROMEOS_LLVM_SUBPACKAGES:
         # N.B., this function will do nothing if the cmake file it aims to
         # modify has the marker already. Hence, calling it unconditionally on
         # all projects is fine.

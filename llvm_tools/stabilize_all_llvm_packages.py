@@ -115,7 +115,7 @@ def main(argv: List[str]) -> None:
     desired_sha = resolve_llvm_sha(opts.llvm_next)
 
     with llvm_checked_out_to(desired_sha):
-        packages_to_stabilize = patch_utils.CHROMEOS_PATCHES_JSON_PACKAGES
+        packages_to_stabilize = patch_utils.CHROMEOS_LLVM_SUBPACKAGES
         logging.info("Stabilizing %s...", ", ".join(packages_to_stabilize))
 
         cros_overlay = (
