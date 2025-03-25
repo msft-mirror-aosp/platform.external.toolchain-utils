@@ -79,7 +79,7 @@ def autodetect_cros_channels(git_repo: Path) -> Dict[Channel, ChannelBranch]:
         stdin=subprocess.DEVNULL,
         stdout=subprocess.PIPE,
         encoding="utf-8",
-    ).stdout
+    ).stdout.strip()
 
     # Match "${remote}/release-R${branch_number}-${build}.B"
     branch_re = re.compile(r"([^/]+)/(release-R(\d+)-\d+\.B)")
@@ -709,3 +709,35 @@ def commit_author_email(git_dir: Path, ref: str) -> str:
         encoding="utf-8",
         check=True,
     ).stdout.strip()
+
+
+def log(
+    git_dir: Path,
+    head: str,
+    stop_at: Optional[str] = None,
+    log_format: Optional[str] = None,
+) -> str:
+    """Runs `git log` between `head` and `stop_at`.
+
+    Args:
+        git_dir: Directory to run `git log` in.
+        head: Commit to start at. This is always included in the log.
+        stop_at: Optional commit to stop at. This is _not_ included in the log.
+        log_format: String to pass to `git log`'s `--format` flag.
+
+    Returns:
+        The output out `git log`.
+    """
+    cmd = ["git", "log"]
+    if log_format:
+        cmd.append(f"--format={log_format}")
+
+    cmd.append(f"{stop_at}..{head}" if stop_at else head)
+    return subprocess.run(
+        cmd,
+        check=True,
+        cwd=git_dir,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        encoding="utf-8",
+    ).stdout

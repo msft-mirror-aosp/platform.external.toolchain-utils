@@ -40,6 +40,54 @@ from llvm_tools import llvm_project_base_commit
 from llvm_tools import patch_utils
 
 
+def verify_no_cq_depends(
+    worktree_dir: Path,
+    head: str,
+    baseline_hash: str,
+) -> bool:
+    """Checks for Cq-Depends in the given branch.
+
+    Returns:
+        False if Cq-Depends were found and an error was printed.
+    """
+    git_log = git_utils.log(
+        worktree_dir, head=head, stop_at=baseline_hash, log_format="%B"
+    )
+    if not git_log or git_log.isspace():
+        raise ValueError("`git log` was empty - broken head/baseline_hash?")
+
+    cq_depends = re.findall(r"^Cq-Depend:.*$", git_log, re.MULTILINE)
+    if not cq_depends:
+        return True
+
+    # Write out a separator so this section is visually distinct.
+    print(
+        textwrap.dedent(
+            """\
+            ==================================================================
+
+            Cq-Depends detected!
+
+            These are _not_ checked by this script, but the commands that this
+            script tells you to execute _will_ mass-stamp them. Please verify
+            manually that either:
+            - these are all merged (so you can ignore them), or
+            - you are OK with automatically stamping and CQ+2'ing all of them
+
+            If this is the case, rerun this script with the
+            '--ignore-cq-depend' flag to skip this error. Otherwise, please
+            work with the Mage to remove the `Cq-Depend`s.
+            """
+        ).strip(),
+        file=sys.stderr,
+    )
+
+    print("Listing of Cq-Depend found in git log:", file=sys.stderr)
+    for d in cq_depends:
+        print(f"- {d}", file=sys.stderr)
+    return False
+
+
 def verify_in_worktree(
     toolchain_utils_dir: Path,
     llvm_src_dir: Path,
@@ -47,6 +95,7 @@ def verify_in_worktree(
     chromiumos_overlay: Path,
     svn_revision: int,
     cl_ref: str,
+    ignore_cq_depend: bool = False,
 ) -> bool:
     """Check equality between the local patches and an upstream CL reference.
 
@@ -58,6 +107,8 @@ def verify_in_worktree(
         svn_revision: The synthetic SVN-style revision number to
             determine which patches apply.
         cl_ref: Upstream Change List reference name.
+        ignore_cq_depend: if True, this won't warn about Cq-Depend footers in
+            the log for `cl_ref`.
 
     Returns:
         True if the local patches match, False otherwise
@@ -105,6 +156,7 @@ def verify_in_worktree(
             remote=git_utils.CROS_EXTERNAL_REMOTE,
             branch=cl_ref,
         )
+
         diff = ref_diff(worktree_dir, "HEAD", "FETCH_HEAD")
         if diff:
             local_head = git_utils.resolve_ref(worktree_dir, "HEAD")
@@ -118,6 +170,17 @@ def verify_in_worktree(
             )
             print("\n".join(diff_msg), file=sys.stderr)
             return False
+
+        if not (
+            ignore_cq_depend
+            or verify_no_cq_depends(
+                worktree_dir,
+                head="FETCH_HEAD",
+                baseline_hash=matching_hash,
+            )
+        ):
+            return False
+
     return True
 
 
@@ -213,6 +276,11 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
         from --chromiumos-root.
         """,
     )
+    parser.add_argument(
+        "--ignore-cq-depend",
+        action="store_true",
+        help="If passed, this script won't error out on Cq-Depend footers.",
+    )
     llvm_dir_action = parser.add_argument(
         "--llvm-dir",
         type=Path,
@@ -272,6 +340,7 @@ def main(argv: List[str]) -> int:
         chromiumos_overlay=args.chromiumos_root / cros_paths.CHROMIUMOS_OVERLAY,
         svn_revision=svn_revision,
         cl_ref=cl_ref,
+        ignore_cq_depend=args.ignore_cq_depend,
     ):
         return 1
     print(_verified_message(svn_revision, args.cl, cl_ref))

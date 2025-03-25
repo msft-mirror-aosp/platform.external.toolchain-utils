@@ -9,6 +9,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import textwrap
 from typing import Callable
 from unittest import mock
 
@@ -304,6 +305,7 @@ class TestVerifyPatchConsistency(test_helpers.TempDirTestCase):
                         chromiumos_overlay=args.chromiumos_overlay,
                         svn_revision=svn_revision,
                         cl_ref=args.main_sha,
+                        ignore_cq_depend=True,
                     )
                 )
             finally:
@@ -334,9 +336,61 @@ class TestVerifyPatchConsistency(test_helpers.TempDirTestCase):
                         chromiumos_overlay=args.chromiumos_overlay,
                         svn_revision=svn_revision,
                         cl_ref=args.patch_branch,
+                        ignore_cq_depend=True,
                     )
                 )
             finally:
                 self._stop_mocking()
 
         self._run_llvm_harness(tempdir, svn_revision, _runner)
+
+    @mock.patch.object(git_utils, "log")
+    def test_cq_depend_detection_passes_if_no_cq_depend(self, git_log_mock):
+        # Put this in a tempdir in case it escapes the mocks somehow; we know
+        # the tempdir is empty.
+        tempdir = self.make_tempdir()
+        git_log_mock.return_value = textwrap.dedent(
+            """\
+            foo bar baz
+            > Cq-Depend: that doesn't matter
+            Cq-Depend that also doesn't matter (no `:`)
+            qux
+            """
+        )
+        self.assertTrue(
+            verify_patch_consistency.verify_no_cq_depends(
+                worktree_dir=tempdir, head="HEAD", baseline_hash="HEAD~"
+            )
+        )
+
+    @mock.patch.object(git_utils, "log")
+    def test_cq_depend_detection_raises_if_no_log_contents(self, git_log_mock):
+        tempdir = self.make_tempdir()
+
+        git_log_mock.return_value = ""
+        with self.assertRaisesRegex(ValueError, "`git log` was empty.*"):
+            verify_patch_consistency.verify_no_cq_depends(
+                worktree_dir=tempdir, head="HEAD", baseline_hash="HEAD~"
+            )
+
+        git_log_mock.return_value = "\n"
+        with self.assertRaisesRegex(ValueError, "`git log` was empty.*"):
+            verify_patch_consistency.verify_no_cq_depends(
+                worktree_dir=tempdir, head="HEAD", baseline_hash="HEAD~"
+            )
+
+    @mock.patch.object(git_utils, "log")
+    def test_cq_depend_detection_fails_if_cq_depend(self, git_log_mock):
+        tempdir = self.make_tempdir()
+        git_log_mock.return_value = textwrap.dedent(
+            """\
+            foo bar baz
+            Cq-Depend: chromium:1234
+            qux
+            """
+        )
+        self.assertFalse(
+            verify_patch_consistency.verify_no_cq_depends(
+                worktree_dir=tempdir, head="HEAD", baseline_hash="HEAD~"
+            )
+        )
