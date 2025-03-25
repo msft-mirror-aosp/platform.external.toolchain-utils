@@ -1,0 +1,287 @@
+[
+  {
+    "metadata": {
+      "info": [],
+      "title": "Adds a allowlist of packages that have known memory leaks"
+    },
+    "platforms": [
+      "chromiumos"
+    ],
+    "rel_patch_path": "Adds-a-allowlist-of-packages-that-have-known-memory-v5.patch",
+    "version_range": {
+      "from": 445947,
+      "until": null
+    }
+  },
+  {
+    "metadata": {
+      "info": [],
+      "title": "Sets the ASAN message to go to /va/log/asan${pid} by\ndefault"
+    },
+    "platforms": [
+      "chromiumos"
+    ],
+    "rel_patch_path": "clang-12.0-asan-default-path.patch",
+    "version_range": {
+      "from": 408666,
+      "until": null
+    }
+  },
+  {
+    "metadata": {
+      "info": [],
+      "title": "Fixes crbug/591436. Force fallback to traditional executable detection"
+    },
+    "platforms": [
+      "chromiumos"
+    ],
+    "rel_patch_path": "llvm-8.0-clang-executable-detection.v2.patch",
+    "version_range": {
+      "from": 370808,
+      "until": null
+    }
+  },
+  {
+    "metadata": {
+      "info": [],
+      "title": "Temporary workaround. Breakpad cannot handle Dwarf\nVersion 4. Works around issue by forcing Debug Frames\nversion of Dwarf to be version 1, while leaving the rest of\nthe Dwarf data at version 4"
+    },
+    "platforms": [
+      "chromiumos"
+    ],
+    "rel_patch_path": "llvm-3.9-dwarf-version.patch",
+    "version_range": {
+      "from": 0,
+      "until": null
+    }
+  },
+  {
+    "metadata": {
+      "info": [],
+      "title": "Uses argv[0] to get host system information. Created\na wrapper of LLD and real lld becomes lld.elf so the LLD\ncannot get the host system information and dies"
+    },
+    "platforms": [
+      "chromiumos"
+    ],
+    "rel_patch_path": "lld-10.0-invoke-name-v2.patch",
+    "version_range": {
+      "from": 502154,
+      "until": null
+    }
+  },
+  {
+    "metadata": {
+      "info": [],
+      "title": "Fixes clang.elf calling clang.elf because direct\ncalls to clang.elf misses all environment setup in clang\nwrapper. Calls to clang wrapper instead of clang.elf binary"
+    },
+    "platforms": [
+      "chromiumos"
+    ],
+    "rel_patch_path": "llvm-17.0-invocation.patch",
+    "version_range": {
+      "from": 489485,
+      "until": null
+    }
+  },
+  {
+    "metadata": {
+      "info": [],
+      "title": "[libcxx] v4: Crash when dereferencing nullopt for std::optional"
+    },
+    "platforms": [
+      "chromiumos"
+    ],
+    "rel_patch_path": "libcxx-crash-when-dereferencing-nullopt-v4.patch",
+    "version_range": {
+      "from": 520603,
+      "until": 547379
+    }
+  },
+  {
+    "metadata": {
+      "info": [],
+      "title": "v5: Crash when dereferencing nullopt for std::optional"
+    },
+    "platforms": [
+      "chromiumos"
+    ],
+    "rel_patch_path": "v5-Crash-when-dereferencing-nullopt-for-std-optional.patch",
+    "version_range": {
+      "from": 547379,
+      "until": null
+    }
+  },
+  {
+    "metadata": {
+      "info": [],
+      "title": "Increase max allocation size to allow BOLTing clang and rustc"
+    },
+    "platforms": [
+      "android",
+      "chromiumos"
+    ],
+    "rel_patch_path": "BOLT-Increase-max-allocation-size-to-allow-BOLTing-clang-and-rustc.patch",
+    "version_range": {
+      "from": 450784,
+      "until": null
+    }
+  },
+  {
+    "metadata": {
+      "info": [],
+      "title": "Disable vfork/fork events"
+    },
+    "platforms": [
+      "android",
+      "chromiumos"
+    ],
+    "rel_patch_path": "Disable-vfork-fork-events.patch",
+    "version_range": {
+      "from": 468909,
+      "until": 547379
+    }
+  },
+  {
+    "metadata": {
+      "info": [],
+      "title": "Disable vfork events v2"
+    },
+    "platforms": [
+      "android",
+      "chromiumos"
+    ],
+    "rel_patch_path": "Disable-vfork-events-v2.patch",
+    "version_range": {
+      "from": 547379,
+      "until": null
+    }
+  },
+  {
+    "metadata": {
+      "info": [],
+      "title": "v2: Revert [Driver] Allow target override containing . in executable name"
+    },
+    "platforms": [
+      "android",
+      "chromiumos"
+    ],
+    "rel_patch_path": "Revert-Driver-Allow-target-override-containing-.-in-executable-name-v2.patch",
+    "version_range": {
+      "from": 521684,
+      "until": null
+    }
+  },
+  {
+    "metadata": {
+      "info": [],
+      "title": "Disable Cast Assertion"
+    },
+    "platforms": [
+      "chromiumos"
+    ],
+    "rel_patch_path": "Disable-Cast-Assertion.patch",
+    "version_range": {
+      "from": 475826,
+      "until": null
+    }
+  },
+  {
+    "metadata": {
+      "info": [],
+      "title": "inline-cost: skip threshold checks"
+    },
+    "platforms": [
+      "chromiumos"
+    ],
+    "rel_patch_path": "inline-cost-skip-threshold-checks.patch",
+    "version_range": {
+      "from": 510928,
+      "until": null
+    }
+  },
+  {
+    "metadata": {
+      "info": [],
+      "title": "[LoopUnroll] Ignore inlinable calls if unrolling is forced"
+    },
+    "platforms": [
+      "chromiumos"
+    ],
+    "rel_patch_path": "Ignore-inlinable-calls-if-unrolling-is-forced.patch",
+    "version_range": {
+      "from": 516547,
+      "until": null
+    }
+  },
+  {
+    "metadata": {
+      "info": [],
+      "title": "[PATCH] [scudo] Add baseline Scudo config for ChromeOS"
+    },
+    "platforms": [
+      "chromiumos"
+    ],
+    "rel_patch_path": "scudo-Add-baseline-Scudo-config-for-ChromeOS-v2.patch",
+    "version_range": {
+      "from": 510928,
+      "until": null
+    }
+  },
+  {
+    "metadata": {
+      "info": [],
+      "title": "Disable querying git in benchmarking code"
+    },
+    "platforms": [
+      "chromiumos"
+    ],
+    "rel_patch_path": "disable-querying-git-in-benchmarking-code.patch",
+    "version_range": {
+      "from": null,
+      "until": null
+    }
+  },
+  {
+    "metadata": {
+      "info": [],
+      "title": "Revert \"add_tablegen: Quick fix to reflect LLVM_TABLEGEN to llvm-min-tblgen\""
+    },
+    "platforms": [
+      "chromiumos"
+    ],
+    "rel_patch_path": "671af65d003bb0e26d29ee63469f8ea7e65ecfee.patch",
+    "version_range": {
+      "from": 498229,
+      "until": null
+    }
+  },
+  {
+    "metadata": {
+      "info": [],
+      "original_sha": "0a00d32c5f88fce89006dcde6e235bc77d7b495e",
+      "title": "[lldb] Add armv7a and armv8a ArchSpecs (#106433)"
+    },
+    "platforms": [
+      "chromiumos"
+    ],
+    "rel_patch_path": "cherry/0a00d32c5f88fce89006dcde6e235bc77d7b495e.patch",
+    "version_range": {
+      "from": 530567,
+      "until": 547992
+    }
+  },
+  {
+    "metadata": {
+      "info": [],
+      "title": "[libc++] Make _LIBCPP_MAKE_OVERRIDABLE_FUNCTION_DETECTABLE a no-op on baremetal"
+    },
+    "platforms": [
+      "chromiumos"
+    ],
+    "rel_patch_path": "libc-Make-_LIBCPP_MAKE_OVERRIDABLE_FUNCTION_DETECTAB.patch",
+    "version_range": {
+      "from": 530567,
+      "until": null
+    }
+  }
+]
