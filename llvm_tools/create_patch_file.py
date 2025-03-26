@@ -47,6 +47,9 @@ _DEFAULT_BRANCH_PATTERN = "*/chromeos/llvm-*"
 
 _CHANGE_ID_REGEX = re.compile(r"^change-id:\s*\w+\s*$", re.IGNORECASE)
 _COMMIT_MESSAGE_END_GUESS = re.compile(r"^---(:? .*)?$")
+_CHROMEOS_SCOPED_EMAIL = (
+    "chromeos-scoped@luci-project-accounts.iam.gserviceaccount.com"
+)
 
 
 @dataclasses.dataclass
@@ -111,7 +114,7 @@ def _get_metadata_info(commit_metadata: Dict[str, str]) -> List[str]:
 
 
 def _get_metadata_original_sha(
-    commit_metadata: Dict[str, str]
+    commit_metadata: Dict[str, str],
 ) -> Optional[str]:
     return commit_metadata.get("patch.metadata.original_sha")
 
@@ -169,6 +172,21 @@ def create_branch_contexts(
         )
         this_branch_combos: List[PatchCombo] = []
         for commit_sha in commit_shas:
+            # Skip any commits made by the LUCI infrastructure. These should
+            # not exist, but if they do, ignore them.
+            if (
+                git_utils.commit_author_email(
+                    patch_context.llvm_dir,
+                    commit_sha,
+                )
+                == _CHROMEOS_SCOPED_EMAIL
+            ):
+                logging.warning(
+                    "commit %s was made by %s, which is invalid. Skipping.",
+                    commit_sha,
+                    _CHROMEOS_SCOPED_EMAIL,
+                )
+                continue
             patch_raw_data = filter_change_id(
                 git_utils.format_patch(patch_context.llvm_dir, commit_sha)
             )

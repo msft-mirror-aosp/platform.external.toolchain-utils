@@ -697,3 +697,15 @@ def branch_list(git_dir: Path, glob: Optional[str] = None) -> List[str]:
         .stdout.strip()
         .splitlines()
     )
+
+
+def commit_author_email(git_dir: Path, ref: str) -> str:
+    """Return the author email of a given git ref."""
+    return subprocess.run(
+        ["git", "show", "--format=%aE", ref],
+        cwd=git_dir,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        encoding="utf-8",
+        check=True,
+    ).stdout.strip()
