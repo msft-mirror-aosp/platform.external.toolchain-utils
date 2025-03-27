@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"regexp"
@@ -289,7 +288,7 @@ func doubleBuildWithWNoError(env env, cfg *config, originalCmd *command, werrorC
 	// Coming up with a consistent name for this is difficult (compiler command's
 	// SHA can clash in the case of identically named files in different
 	// directories, or similar); let's use a random one.
-	tmpFile, err := ioutil.TempFile(reportDir, "warnings_report*.json"+incompleteSuffix)
+	tmpFile, err := os.CreateTemp(reportDir, "warnings_report*.json"+incompleteSuffix)
 	if err != nil {
 		return 0, wrapErrorwithSourceLocf(err, "error creating warnings file")
 	}
@@ -341,7 +340,7 @@ func collectProcessData(pid int) (args, env []string, parentPid int, err error) 
 	procDir := fmt.Sprintf("/proc/%d", pid)
 
 	readFile := func(fileName string) (string, error) {
-		s, err := ioutil.ReadFile(path.Join(procDir, fileName))
+		s, err := os.ReadFile(path.Join(procDir, fileName))
 		if err != nil {
 			return "", fmt.Errorf("reading %s: %v", fileName, err)
 		}

@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -56,7 +55,7 @@ var umaskModificationLock sync.RWMutex
 
 func withTestContext(t *testing.T, work func(ctx *testContext)) {
 	t.Parallel()
-	tempDir, err := ioutil.TempDir("", "compiler_wrapper")
+	tempDir, err := os.MkdirTemp("", "compiler_wrapper")
 	if err != nil {
 		t.Fatalf("Unable to create the temp dir. Error: %s", err)
 	}
@@ -215,7 +214,7 @@ func (ctx *testContext) writeFile(fullFileName string, fileContent string) {
 	if err := os.MkdirAll(filepath.Dir(fullFileName), 0777); err != nil {
 		ctx.t.Fatal(err)
 	}
-	if err := ioutil.WriteFile(fullFileName, []byte(fileContent), 0777); err != nil {
+	if err := os.WriteFile(fullFileName, []byte(fileContent), 0777); err != nil {
 		ctx.t.Fatal(err)
 	}
 }
@@ -239,7 +238,7 @@ func (ctx *testContext) readAllString(r io.Reader) string {
 	if r == nil {
 		return ""
 	}
-	bytes, err := ioutil.ReadAll(r)
+	bytes, err := io.ReadAll(r)
 	if err != nil {
 		ctx.t.Fatal(err)
 	}

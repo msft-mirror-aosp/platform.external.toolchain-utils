@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -397,7 +396,7 @@ func withForceDisableWErrorTestContext(t *testing.T, work func(ctx *testContext)
 
 func readLoggedWarnings(ctx *testContext) *warningsJSONData {
 	warningsDir := getForceDisableWerrorDir(ctx, ctx.cfg)
-	files, err := ioutil.ReadDir(warningsDir)
+	files, err := os.ReadDir(warningsDir)
 	if err != nil {
 		if _, ok := err.(*os.PathError); ok {
 			return nil
@@ -407,7 +406,7 @@ func readLoggedWarnings(ctx *testContext) *warningsJSONData {
 	if len(files) != 1 {
 		ctx.t.Fatalf("expected 1 warning log file. Got: %s", files)
 	}
-	data, err := ioutil.ReadFile(filepath.Join(warningsDir, files[0].Name()))
+	data, err := os.ReadFile(filepath.Join(warningsDir, files[0].Name()))
 	if err != nil {
 		ctx.t.Fatal(err)
 	}
