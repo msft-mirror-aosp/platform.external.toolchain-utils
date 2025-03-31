@@ -13,6 +13,9 @@ if [[ -z "${1:-}" || "$1" == "--help" || "$1" == "-h" ]]; then
   >&2 echo "USAGE: $0 [-h|--help] BOARD"
   >&2 echo
   >&2 echo "  -h,--help:  Print this help."
+  >&2 echo
+  >&2 echo "  BOARD: the board to workon board-specific packages for. If"
+  >&2 echo "    you'd only like to build host packages, pass '-' for this."
   exit 1
 fi
 
@@ -64,5 +67,8 @@ workon_board() {
 
 workon_host
 echo "Set up host packages!"
-workon_board "$1"
-echo "Set up packages for $1!"
+board="$1"
+if [[ "${board}" != "-" ]]; then
+  workon_board "$1"
+  echo "Set up packages for $1!"
+fi
