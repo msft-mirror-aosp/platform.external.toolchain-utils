@@ -35,20 +35,26 @@ from llvm_tools import patch_utils
 
 
 def _switch_branch(
-    llvm_src_dir: Path, svn_revision: int, branch_number: int = 1
+    llvm_src_dir: Path,
+    svn_revision: int,
+    branch_number: int = 1,
+    force_checkout: bool = False,
 ) -> str:
     start_sha = git_llvm_rev.translate_rev_to_sha(
         git_llvm_rev.LLVMConfig(git_utils.CROS_EXTERNAL_REMOTE, llvm_src_dir),
         git_llvm_rev.Rev(git_utils.CROS_MAIN_BRANCH, svn_revision),
     )
+    switch_arg = "-C" if force_checkout else "-c"
+    if force_checkout:
+        git_utils.discard_changes_and_checkout(llvm_src_dir, start_sha)
     branch_name = f"chromeos/llvm-r{svn_revision}-{branch_number}"
-    cmd = [
+    cmd = (
         "git",
         "switch",
-        "-c",
+        switch_arg,
         branch_name,
         start_sha,
-    ]
+    )
     subprocess.run(cmd, cwd=llvm_src_dir, check=True, stdin=subprocess.DEVNULL)
     return branch_name
 
@@ -131,6 +137,15 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
         from --chromiumos-root.
         """,
     )
+    parser.add_argument(
+        "--force-checkout",
+        action="store_true",
+        help="""
+        Runs `git clean` and `git reset --hard` before running, discarding
+        any local changes. If you passed `--svn-revision` and the local branch
+        that would be created exists already, this will also delete that branch.
+        """,
+    )
     llvm_dir_action = parser.add_argument(
         "--llvm-dir",
         type=Path,
@@ -203,13 +218,20 @@ def main(sys_argv: List[str]) -> None:
     )
     args = parse_args(sys_argv)
     branch_name = ""
+
     if args.svn_revision:
         svn_revision = args.svn_revision
         branch_name = _switch_branch(
-            args.llvm_dir, svn_revision, args.branch_number
+            args.llvm_dir,
+            svn_revision,
+            args.branch_number,
+            args.force_checkout,
         )
         logging.info("Created and switched to branch %s.", branch_name)
     elif args.head:
+        if args.force_checkout:
+            git_utils.discard_changes_and_checkout(args.llvm_dir, "HEAD")
+
         to_translate = git_utils.merge_base(
             args.llvm_dir,
             ["cros/upstream/main", "HEAD"],
