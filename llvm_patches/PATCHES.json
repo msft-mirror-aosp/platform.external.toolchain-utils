@@ -295,6 +295,20 @@
     "rel_patch_path": "libc-Make-_LIBCPP_MAKE_OVERRIDABLE_FUNCTION_DETECTAB.patch",
     "version_range": {
       "from": 530567,
+      "until": 563880
+    }
+  },
+  {
+    "metadata": {
+      "info": [],
+      "title": "[libc++] Make _LIBCPP_MAKE_OVERRIDABLE_FUNCTION_DETECTABLE a no-op on baremetal"
+    },
+    "platforms": [
+      "chromiumos"
+    ],
+    "rel_patch_path": "v2-libc-Make-_LIBCPP_MAKE_OVERRIDABLE_FUNCTION_DETECTAB.patch",
+    "version_range": {
+      "from": 563880,
       "until": null
     }
   },
@@ -442,7 +456,7 @@
     "rel_patch_path": "cros-add-llvm-rev-file.patch",
     "version_range": {
       "from": null,
-      "until": null
+      "until": 563880
     }
   },
   {
