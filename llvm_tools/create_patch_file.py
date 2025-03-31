@@ -362,7 +362,10 @@ def _find_new_patch_combos(
 def parse_args(argv: List[str]) -> argparse.Namespace:
     """Parse passed in argv list."""
 
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     chromiumos_root_action = parser.add_argument(
         "--chromiumos-root",
         type=Path,
