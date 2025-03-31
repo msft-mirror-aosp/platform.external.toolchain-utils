@@ -108,6 +108,20 @@
     "rel_patch_path": "v5-Crash-when-dereferencing-nullopt-for-std-optional.patch",
     "version_range": {
       "from": 547379,
+      "until": 563880
+    }
+  },
+  {
+    "metadata": {
+      "info": [],
+      "title": "v6: Crash when dereferencing nullopt for std::optional"
+    },
+    "platforms": [
+      "chromiumos"
+    ],
+    "rel_patch_path": "v6-Crash-when-dereferencing-nullopt-for-std-optional.patch",
+    "version_range": {
+      "from": 563880,
       "until": null
     }
   },
