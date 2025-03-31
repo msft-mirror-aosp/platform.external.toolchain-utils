@@ -168,6 +168,10 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 			return 0, newErrorwithSourceLocf("unsupported compiler: %s", mainBuilder.target.compiler)
 		}
 	} else {
+		if isRiscvBuildWithoutAckFlag(env, mainBuilder) {
+			return 0, errors.New(riscvExperimentalUseError)
+		}
+
 		cSrcFile, tidyFlags, tidyMode := processClangTidyFlags(mainBuilder)
 		crashArtifactsDir := detectCrashArtifactsDir(env, cfg)
 		if mainBuilder.target.compilerType == clangType {

@@ -23,6 +23,7 @@ const (
 	mainCc           = "main.cc"
 	clangAndroid     = "./clang"
 	clangTidyAndroid = "./clang-tidy"
+	clangRiscv       = "./riscv32-cros-elf-clang"
 	clangX86_64      = "./x86_64-cros-linux-gnu-clang"
 	gccX86_64        = "./x86_64-cros-linux-gnu-gcc"
 	gccX86_64Eabi    = "./x86_64-cros-eabi-gcc"

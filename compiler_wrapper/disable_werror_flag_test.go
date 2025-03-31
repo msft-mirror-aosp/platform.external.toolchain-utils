@@ -634,9 +634,15 @@ func TestClangTidyNoDoubleBuild(t *testing.T) {
 	})
 }
 
-func withAndroidClangTidyTestContext(t *testing.T, work func(ctx *testContext)) {
+func withAndroidTestContext(t *testing.T, work func(ctx *testContext)) {
 	withTestContext(t, func(ctx *testContext) {
 		ctx.cfg.isAndroidWrapper = true
+		work(ctx)
+	})
+}
+
+func withAndroidClangTidyTestContext(t *testing.T, work func(ctx *testContext)) {
+	withAndroidTestContext(t, func(ctx *testContext) {
 		ctx.cfg.useLlvmNext = true
 		ctx.env = []string{"OUT_DIR=/tmp"}
 
