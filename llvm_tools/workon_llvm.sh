@@ -20,6 +20,8 @@ CROSS_COMPILE_TARGETS=(
   cross-aarch64-cros-linux-gnu
   cross-arm-none-eabi
   cross-armv7a-cros-linux-gnueabihf
+  cross-armv7m-cros-eabi
+  cross-riscv32-cros-elf
   cross-x86_64-cros-linux-gnu
 )
 
