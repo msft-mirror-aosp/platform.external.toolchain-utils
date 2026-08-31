@@ -4,9 +4,12 @@
 
 """Tests for generate_warning_exemption_files."""
 
+import argparse
 import textwrap
+from unittest import mock
 
 # Rename this so the lines in this test aren't all super-long
+from llvm_tools import cros_cls
 from llvm_tools import generate_warning_exemption_files as gen
 from llvm_tools import test_helpers
 from llvm_tools import warning_exemption
@@ -161,3 +164,77 @@ class Test(test_helpers.TempDirTestCase):
             "/path/to/foo.cc:12:34: error: don't do this [-Wfoo1]",
         )
         self.assertEqual(result, sorted(expected_output))
+
+    @mock.patch.object(
+        cros_cls.CQBoardBuilderOutput, "fetch_many", autospec=True
+    )
+    @mock.patch.object(
+        cros_cls, "fetch_cq_orchestrator_or_board_builder", autospec=True
+    )
+    def test_resolve_builder_artifacts_when_builders_lack_artifacts(
+        self, mock_fetch: mock.Mock, mock_fetch_many: mock.Mock
+    ) -> None:
+        mock_fetch.side_effect = [
+            (
+                "staging-amd64-generic-asan",
+                cros_cls.CQBoardBuilderOutput(
+                    status=cros_cls.BuilderStatus.SUCCESS,
+                    artifacts_link="gs://chromeos-image-archive/asan-artifacts",
+                ),
+            ),
+            (
+                "staging-build-chromiumos-sdk",
+                cros_cls.CQBoardBuilderOutput(
+                    status=cros_cls.BuilderStatus.SUCCESS,
+                    artifacts_link=None,
+                ),
+            ),
+            (
+                "cq-orchestrator",
+                cros_cls.CQOrchestratorOutput(
+                    status=cros_cls.BuilderStatus.SUCCESS,
+                    child_builders={"brya-cq": 101, "betty-cq": 102},
+                ),
+            ),
+        ]
+        mock_fetch_many.return_value = [
+            cros_cls.CQBoardBuilderOutput(
+                status=cros_cls.BuilderStatus.SUCCESS,
+                artifacts_link=None,
+            ),
+            cros_cls.CQBoardBuilderOutput(
+                status=cros_cls.BuilderStatus.SUCCESS,
+                artifacts_link="gs://chromeos-image-archive/brya-artifacts",
+            ),
+        ]
+        results = gen.resolve_builder_artifacts([1, 2, 3])
+        self.assertEqual(
+            results,
+            [
+                (
+                    warning_exemption.Builder(
+                        name="staging-amd64-generic-asan",
+                        url="https://ci.chromium.org/b/1",
+                    ),
+                    "gs://chromeos-image-archive/asan-artifacts",
+                ),
+                (
+                    warning_exemption.Builder(
+                        name="brya-cq",
+                        url="https://ci.chromium.org/b/101",
+                    ),
+                    "gs://chromeos-image-archive/brya-artifacts",
+                ),
+            ],
+        )
+
+    @mock.patch.object(gen, "resolve_builder_artifacts", autospec=True)
+    def test_cmd_builders_raises_when_no_artifacts(
+        self, mock_resolve: mock.Mock
+    ) -> None:
+        mock_resolve.return_value = []
+        opts = argparse.Namespace(builder_id=[123])
+        with self.assertRaisesRegex(
+            ValueError, "No artifacts found across all given builders"
+        ):
+            gen.cmd_builders(opts)

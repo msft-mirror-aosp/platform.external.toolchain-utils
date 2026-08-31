@@ -237,11 +237,6 @@ def resolve_builder_artifacts(
 
     If any of the `build_ids` are cq-orchestrators, this will find their
     children and return the Builder/artifacts tuples for those instead.
-
-    Raises:
-        ValueError if any of the given build_ids had no associated artifacts.
-        (That is, for cq-orchestrators, if _none_ of their children had
-        artifacts that could be found).
     """
     results = []
     for build_id in build_ids:
@@ -272,7 +267,7 @@ def resolve_builder_artifacts(
             results.append((builder, artifacts_link))
 
         if not found_any_artifacts:
-            raise ValueError(f"No artifacts found for {build_id} (or children)")
+            logging.warning("No artifacts found for %d (or children)", build_id)
     return results
 
 
@@ -355,6 +350,12 @@ def cmd_builders(
 ]:
     """Implements the `builders` subcommand."""
     builder_artifacts = resolve_builder_artifacts(opts.builder_id)
+    if not builder_artifacts:
+        raise ValueError(
+            "No artifacts found across all given builders. Either there are "
+            "no warnings to suppress, or there's a bug in the script leading "
+            "to no warning tarballs being found."
+        )
 
     tmpdir = Path(tempfile.mkdtemp(prefix="generate_warning_exemption_files"))
     cleanup_tmpdir = False
