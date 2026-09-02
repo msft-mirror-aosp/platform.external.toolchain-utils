@@ -157,7 +157,7 @@ class Test(unittest.TestCase):
         )
         assert ret is not None
         title, body = ret
-        self.assertEqual(title, "[Rust] Update to 1.0.1")
+        self.assertEqual(title, "[ChromeOS/Rust] Update to 1.0.1")
         self.assertTrue(body.startswith(bug_body_start))
 
         ret = rust_watch.maybe_compose_bug(
@@ -169,7 +169,7 @@ class Test(unittest.TestCase):
         )
         assert ret is not None
         title, body = ret
-        self.assertEqual(title, "[Rust] Update to 1.1.0")
+        self.assertEqual(title, "[ChromeOS/Rust] Update to 1.1.0")
         self.assertTrue(body.startswith(bug_body_start))
 
         ret = rust_watch.maybe_compose_bug(
@@ -181,7 +181,7 @@ class Test(unittest.TestCase):
         )
         assert ret is not None
         title, body = ret
-        self.assertEqual(title, "[Rust] Update to 2.0.0")
+        self.assertEqual(title, "[ChromeOS/Rust] Update to 2.0.0")
         self.assertTrue(body.startswith(bug_body_start))
 
     def test_compose_bug_does_nothing_when_no_new_updates_exist(self) -> None:

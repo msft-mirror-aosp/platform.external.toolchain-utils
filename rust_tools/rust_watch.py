@@ -261,7 +261,7 @@ def maybe_compose_bug(
     if newest_release == old_state.last_seen_release:
         return None
 
-    title = f"[Rust] Update to {newest_release}"
+    title = f"[ChromeOS/Rust] Update to {newest_release}"
     body = (
         "A new Rust stable release has been detected; we should probably roll "
         "to it.\n"
