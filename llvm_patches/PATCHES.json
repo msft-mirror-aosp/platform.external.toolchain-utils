@@ -56,6 +56,21 @@
     "rel_patch_path": "llvm-8.0-clang-executable-detection.v3.patch",
     "version_range": {
       "from": 584947,
+      "until": 614150
+    }
+  },
+  {
+    "metadata": {
+      "author": "Jordan R Abrahams-Whitehead <ajordanr@google.com>",
+      "info": [],
+      "title": "v4: Fixes crbug/591436. Force fallback to traditional executable detection"
+    },
+    "platforms": [
+      "chromiumos"
+    ],
+    "rel_patch_path": "llvm-8.0-clang-executable-detection.v4.patch",
+    "version_range": {
+      "from": 614150,
       "until": null
     }
   },
@@ -131,6 +146,21 @@
     "rel_patch_path": "v8-Crash-when-dereferencing-nullopt-for-std-optional.patch",
     "version_range": {
       "from": 579548,
+      "until": 614150
+    }
+  },
+  {
+    "metadata": {
+      "author": "Jordan R Abrahams-Whitehead <ajordanr@google.com>",
+      "info": [],
+      "title": "v9: Crash when dereferencing nullopt for std::optional"
+    },
+    "platforms": [
+      "chromiumos"
+    ],
+    "rel_patch_path": "v9-Crash-when-dereferencing-nullopt-for-std-optional.patch",
+    "version_range": {
+      "from": 614150,
       "until": null
     }
   },
@@ -224,6 +254,21 @@
     "rel_patch_path": "Ignore-inlinable-calls-if-unrolling-is-forced.patch",
     "version_range": {
       "from": 516547,
+      "until": 614150
+    }
+  },
+  {
+    "metadata": {
+      "author": "George Burgess IV <gbiv@google.com>",
+      "info": [],
+      "title": "v2: [LoopUnroll] Ignore inlinable calls if unrolling is forced"
+    },
+    "platforms": [
+      "chromiumos"
+    ],
+    "rel_patch_path": "Ignore-inlinable-calls-if-unrolling-is-forced-v2.patch",
+    "version_range": {
+      "from": 614150,
       "until": null
     }
   },
@@ -299,6 +344,21 @@
     "rel_patch_path": "v2-Partial-Revert-Driver-Support-using-toolchain-libc-and-libc-for-baremetal-96736-.patch",
     "version_range": {
       "from": 584947,
+      "until": 614150
+    }
+  },
+  {
+    "metadata": {
+      "author": "Jordan R Abrahams-Whitehead <ajordanr@google.com>",
+      "info": [],
+      "title": "v3: Partial Revert \"[Driver] Support using toolchain libc and libc++ for baremetal (#96736)\""
+    },
+    "platforms": [
+      "chromiumos"
+    ],
+    "rel_patch_path": "v3-Partial-Revert-Driver-Support-using-toolchain-libc-and-libc-for-baremetal-96736-.patch",
+    "version_range": {
+      "from": 614150,
       "until": null
     }
   },
@@ -627,6 +687,21 @@
     "rel_patch_path": "Make-_LIBCPP_MAKE_OVERRIDABLE_FUNCTION-a-no-op-on-baremetal.patch",
     "version_range": {
       "from": 584947,
+      "until": 614150
+    }
+  },
+  {
+    "metadata": {
+      "author": "Jordan Abrahams-Whitehead <ajordanr@google.com>",
+      "info": [],
+      "title": "v2: Make _LIBCPP_MAKE_OVERRIDABLE_FUNCTION a no-op on baremetal"
+    },
+    "platforms": [
+      "chromiumos"
+    ],
+    "rel_patch_path": "Make-_LIBCPP_MAKE_OVERRIDABLE_FUNCTION-a-no-op-on-baremetal-v2.patch",
+    "version_range": {
+      "from": 614150,
       "until": null
     }
   },
@@ -895,7 +970,7 @@
     "rel_patch_path": "cherry/a6643f27ecdaaff2945a1acd213a745c1526c525.patch",
     "version_range": {
       "from": 596125,
-      "until": null
+      "until": 598857
     }
   },
   {
@@ -940,6 +1015,21 @@
     "rel_patch_path": "Add-fexperimental-gccadjacent-flag-v2.patch",
     "version_range": {
       "from": 596125,
+      "until": 614150
+    }
+  },
+  {
+    "metadata": {
+      "author": "Jordan Abrahams-Whitehead <ajordanr@google.com>",
+      "info": [],
+      "title": "v3: [clang][Driver] Add -fexperimental-gccadjacent flag"
+    },
+    "platforms": [
+      "chromiumos"
+    ],
+    "rel_patch_path": "Add-fexperimental-gccadjacent-flag-v3.patch",
+    "version_range": {
+      "from": 614150,
       "until": null
     }
   },
@@ -956,7 +1046,22 @@
     "rel_patch_path": "cherry/7e735ea180fe6d199dd71dacf4396bcbbb3bbb3c.patch",
     "version_range": {
       "from": 596125,
-      "until": null
+      "until": 614150
+    }
+  },
+  {
+    "metadata": {
+      "author": "Jordan R Abrahams-Whitehead <ajordanr@google.com>",
+      "info": [],
+      "title": "v2: [compiler-rt][cmake] Fix check_cxx_compiler_flag calls (#197529)"
+    },
+    "platforms": [
+      "chromiumos"
+    ],
+    "rel_patch_path": "use-semicolons-in-check_cxx_compiler_flag.patch",
+    "version_range": {
+      "from": 614150,
+      "until": 618366
     }
   },
   {
@@ -1180,6 +1285,21 @@
     "rel_patch_path": "cherry/a48159df9ce57c2bf377588b52563966865514a2.patch",
     "version_range": {
       "from": 595001,
+      "until": 614150
+    }
+  },
+  {
+    "metadata": {
+      "author": "Jonathan Thackray <jonathan.thackray@arm.com>",
+      "info": [],
+      "title": "[AArch64][llvm] Remove support for FEAT_MPAMv2_VID (#193191)"
+    },
+    "platforms": [
+      "chromiumos"
+    ],
+    "rel_patch_path": "aarch64-remove-support-for-FEAT_MPAMv2_VID.patch",
+    "version_range": {
+      "from": 614150,
       "until": 615887
     }
   },
@@ -1243,7 +1363,7 @@
     "rel_patch_path": "Revert-cros-add-user-enumeration-patch-.patch",
     "version_range": {
       "from": null,
-      "until": null
+      "until": 614150
     }
   },
   {
@@ -1289,6 +1409,21 @@
     "rel_patch_path": "-compiler-rt-builtins-Build-generic-TF-builtins-for-i386.patch",
     "version_range": {
       "from": 584947,
+      "until": 614150
+    }
+  },
+  {
+    "metadata": {
+      "author": "Adrian Ratiu <adrian.ratiu@collabora.com>",
+      "info": [],
+      "title": "v2: [compiler-rt][builtins] Build generic TF builtins for i386"
+    },
+    "platforms": [
+      "chromiumos"
+    ],
+    "rel_patch_path": "compiler-rt-builtins-Build-generic-TF-builtins-for-i386-v2.patch",
+    "version_range": {
+      "from": 614150,
       "until": null
     }
   },

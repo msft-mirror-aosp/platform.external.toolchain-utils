@@ -1,0 +1,51 @@
+From 92ab0d177380fa56ce371e372021ae1ee138c9a7 Mon Sep 17 00:00:00 2001
+From: Deva S <devadharuns@google.com>
+Date: Wed, 9 Sep 2026 06:06:05 +0000
+Subject: [PATCH] v2: Make _LIBCPP_MAKE_OVERRIDABLE_FUNCTION a no-op on
+ baremetal
+
+This is a variation on the previous patch set (reverted in crrev.com/c/7648042), which overrode
+_LIBCPP_MAKE_OVERRIDABLE_FUNCTION_DETECTABLE
+
+Baremetal targets tend to use custom linker scripts, which may not
+include the __lcxx_override section.
+
+patch.cherry: false
+patch.metadata.author: Jordan Abrahams-Whitehead <ajordanr@google.com>
+patch.platforms: chromiumos
+patch.version_range.from: 614150
+patch.version_range.until: null
+
+BUG=b:363082822
+BUG=b:485361709
+TEST=sudo emerge cross-arm-none-eabi/libcxx
+TEST=sudo emerge cross-armv7m-cros-eabi/libcxx
+
+Change-Id: I234f314fce4ef4ba463acaea8bd991012ae5552c
+---
+ libcxx/src/include/overridable_function.h | 9 ++++++++-
+ 1 file changed, 8 insertions(+), 1 deletion(-)
+
+diff --git a/libcxx/src/include/overridable_function.h b/libcxx/src/include/overridable_function.h
+index c8d9f30c74c3..a90d1c84f0c1 100644
+--- a/libcxx/src/include/overridable_function.h
++++ b/libcxx/src/include/overridable_function.h
+@@ -63,7 +63,14 @@
+ // want to be defining special sections inside user's executables which use our headers.
+ //
+ 
+-#if defined(_LIBCPP_OBJECT_FORMAT_MACHO)
++// Baremetal targets tend to use custom linker scripts, which may not include
++// the __lcxx_override section.
++#if defined(LIBCXXABI_BAREMETAL)
++
++#  define _LIBCPP_CAN_DETECT_OVERRIDDEN_FUNCTION 0
++#  define OVERRIDABLE_FUNCTION [[gnu::weak]]
++
++#elif defined(_LIBCPP_OBJECT_FORMAT_MACHO)
+ 
+ #  define _LIBCPP_CAN_DETECT_OVERRIDDEN_FUNCTION 1
+ #  define OVERRIDABLE_FUNCTION [[gnu::weak, gnu::section("__TEXT,__lcxx_override,regular,pure_instructions")]]
+-- 
+2.55.0.979.g7e5102b832-goog
+
