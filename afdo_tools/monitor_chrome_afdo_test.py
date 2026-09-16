@@ -14,6 +14,7 @@ import unittest
 from unittest import mock
 
 from afdo_tools import monitor_chrome_afdo
+from cros_utils import git_utils
 
 
 def arbitrary_time() -> datetime.datetime:
@@ -338,3 +339,55 @@ class Test(unittest.TestCase):
             branch_number=3,
         )
         self.assertIs(result, profile1)
+
+    def test_stable_age_fudging(self) -> None:
+        now = arbitrary_time()
+        old_profile = dataclasses.replace(
+            arbitrary_chrome_gs_profile(),
+            last_modified=now - datetime.timedelta(days=15),
+        )
+        fresh_gs_profile = dataclasses.replace(
+            arbitrary_chrome_gs_profile(),
+            last_modified=now - datetime.timedelta(days=2),
+            cwp_timestamp=old_profile.cwp_timestamp + 100,
+        )
+        branch = git_utils.ChannelBranch(
+            remote="cros",
+            release_number=154,
+            branch_name="release-R154-16805.B",
+        )
+        profiles = {
+            154: [old_profile, fresh_gs_profile],
+        }
+
+        # When branch age is under DAYS_FOR_BRANCH_TO_REACH_STABLE (34 days),
+        # e.g. 30 days old, fudging suppresses the complaint on STABLE.
+        self.assertIsNone(
+            monitor_chrome_afdo.maybe_diagnose_current_chrome_afdo_profile(
+                channel=git_utils.Channel.STABLE,
+                branch=branch,
+                arch=old_profile.arch,
+                subtype=old_profile.subtype,
+                now=now,
+                afdo_profiles=profiles,
+                current_profile_stamp=old_profile.full_name(),
+                max_profile_age=datetime.timedelta(days=10),
+                branch_age_if_fudging=datetime.timedelta(days=30),
+            )
+        )
+
+        # When branch age exceeds DAYS_FOR_BRANCH_TO_REACH_STABLE (e.g. 35
+        # days), fudging no longer suppresses the complaint.
+        self.assertIsNotNone(
+            monitor_chrome_afdo.maybe_diagnose_current_chrome_afdo_profile(
+                channel=git_utils.Channel.STABLE,
+                branch=branch,
+                arch=old_profile.arch,
+                subtype=old_profile.subtype,
+                now=now,
+                afdo_profiles=profiles,
+                current_profile_stamp=old_profile.full_name(),
+                max_profile_age=datetime.timedelta(days=10),
+                branch_age_if_fudging=datetime.timedelta(days=35),
+            )
+        )

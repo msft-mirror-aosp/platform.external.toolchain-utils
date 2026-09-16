@@ -231,7 +231,9 @@ class Test(test_helpers.TempDirTestCase):
             self.assertEqual(channel, git_utils.Channel.parse(channel.value))
 
     @mock.patch.object(subprocess, "run")
-    def test_branch_autodetection(self, subprocess_run: mock.Mock) -> None:
+    def test_branch_autodetection_when_latest_is_odd(
+        self, subprocess_run: mock.Mock
+    ) -> None:
         subprocess_run.return_value = subprocess.CompletedProcess(
             args=[],
             returncode=0,
@@ -241,13 +243,15 @@ class Test(test_helpers.TempDirTestCase):
                 cros/release-R121-15699.B
                 cros/release-R122-15753.B
                 cros/release-R123-15786.B
+                cros/release-R124-15800.B
+                cros/release-R125-15820.B
                 cros/also-not-a-release-branch
                 m/main
                 """
             ),
         )
 
-        branch_dict = git_utils.autodetect_cros_channels(
+        branch_dict = git_utils.autodetect_cros_afdo_channels(
             git_repo=self.make_tempdir()
         )
 
@@ -256,13 +260,13 @@ class Test(test_helpers.TempDirTestCase):
             {
                 git_utils.Channel.CANARY: git_utils.ChannelBranch(
                     remote="cros",
-                    release_number=124,
+                    release_number=126,
                     branch_name="main",
                 ),
                 git_utils.Channel.BETA: git_utils.ChannelBranch(
                     remote="cros",
-                    release_number=123,
-                    branch_name="release-R123-15786.B",
+                    release_number=124,
+                    branch_name="release-R124-15800.B",
                 ),
                 git_utils.Channel.STABLE: git_utils.ChannelBranch(
                     remote="cros",
@@ -271,6 +275,72 @@ class Test(test_helpers.TempDirTestCase):
                 ),
             },
         )
+
+    @mock.patch.object(subprocess, "run")
+    def test_branch_autodetection_when_latest_is_even(
+        self, subprocess_run: mock.Mock
+    ) -> None:
+        subprocess_run.return_value = subprocess.CompletedProcess(
+            args=[],
+            returncode=0,
+            stdout=textwrap.dedent(
+                """
+                cros/release-R122-15753.B
+                cros/release-R123-15786.B
+                cros/release-R124-15800.B
+                m/main
+                """
+            ),
+        )
+
+        branch_dict = git_utils.autodetect_cros_afdo_channels(
+            git_repo=self.make_tempdir()
+        )
+
+        self.assertEqual(
+            branch_dict,
+            {
+                git_utils.Channel.CANARY: git_utils.ChannelBranch(
+                    remote="cros",
+                    release_number=125,
+                    branch_name="main",
+                ),
+                git_utils.Channel.BETA: git_utils.ChannelBranch(
+                    remote="cros",
+                    release_number=124,
+                    branch_name="release-R124-15800.B",
+                ),
+                git_utils.Channel.STABLE: git_utils.ChannelBranch(
+                    remote="cros",
+                    release_number=122,
+                    branch_name="release-R122-15753.B",
+                ),
+            },
+        )
+
+    @mock.patch.object(subprocess, "run")
+    def test_branch_autodetection_fails_with_fewer_than_two_even_branches(
+        self, subprocess_run: mock.Mock
+    ) -> None:
+        subprocess_run.return_value = subprocess.CompletedProcess(
+            args=[],
+            returncode=0,
+            stdout=textwrap.dedent(
+                """
+                cros/release-R121-15699.B
+                cros/release-R122-15753.B
+                cros/release-R123-15786.B
+                m/main
+                """
+            ),
+        )
+
+        with self.assertRaisesRegex(
+            ValueError, "Expected at least two even branches"
+        ):
+            git_utils.autodetect_cros_afdo_channels(
+                git_repo=self.make_tempdir()
+            )
 
 
 class ShowFileAtRevTest(test_helpers.TempDirTestCase):

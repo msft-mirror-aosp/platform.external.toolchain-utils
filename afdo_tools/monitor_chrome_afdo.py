@@ -31,15 +31,19 @@ MIN_PROFILE_MAJOR_VERSION = 120
 
 # For synthesized cronjob logs, how many hours should pass without any reports
 # before the job is considered 'turned down'.
-# Default to around a week, since branches come and go 1x/mo.
-CRONJOB_TURNDOWN_TIME_HOURS = 7 * 24
+# The cronjob runs Sun-Fri (skipping Saturday, a 48h scheduled weekend gap).
+# 4 days gives enough buffer to survive the weekend gap plus a flaked run,
+# while turning down dropped branches promptly.
+CRONJOB_TURNDOWN_TIME_HOURS = 4 * 24
 
-# How many days it generally takes for a branch to be released as ChromeOS'
-# stable branch, per https://chromiumdash.appspot.com/schedule, for suppressing
-# complaints about 'no Stable AFDO profiles'.
+# b/553439910: How many days it generally takes for an even-numbered branch to
+# be released as ChromeOS' stable branch, per
+# https://chromiumdash.appspot.com/schedule, for suppressing complaints about
+# 'no Stable AFDO profiles'.
 #
-# For Chrome, stable promotion generally happens after 4wks + 1 day; for
-# ChromeOS, it's generally 6wks + 1 day.
+# Under the 2-week branching / 4-week even-milestone stable promotion schedule,
+# ChromeOS stable promotion for even milestones generally happens within
+# 4wks + 2 days of branching (e.g. 23-30 days).
 #
 # Add 4 days on top of that as a buffer for pipelines to filter through, since:
 # 1. Skia needs to observe the new branch.
@@ -47,7 +51,7 @@ CRONJOB_TURNDOWN_TIME_HOURS = 7 * 24
 # 3. Chromium needs to tag a version with that CL.
 # 4. ChromeOS needs to roll that tag in.
 # 5. That needs to make its way to the current machine.
-DAYS_FOR_BRANCH_TO_REACH_STABLE = 6 * 7 + 1 + 4
+DAYS_FOR_BRANCH_TO_REACH_STABLE = 4 * 7 + 2 + 4
 
 # Complaint is used below to make function signatures clearer. Semantically
 # each Complaint is a list of paragraphs that should be printed together as a
@@ -893,7 +897,7 @@ def main(argv: list[str]) -> None:
         logging.info("Fetching chromium...")
         git_utils.fetch(chrome_src)
 
-    channel_branches = git_utils.autodetect_cros_channels(
+    channel_branches = git_utils.autodetect_cros_afdo_channels(
         git_repo=chromiumos_overlay
     )
 

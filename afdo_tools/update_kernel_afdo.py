@@ -648,7 +648,7 @@ def main(argv: list[str]) -> None:
         max_profile_age=datetime.timedelta(days=opts.max_age_days),
     )
 
-    branches = git_utils.autodetect_cros_channels(toolchain_utils)
+    branches = git_utils.autodetect_cros_afdo_channels(toolchain_utils)
     logging.debug("Current branches: %s", branches)
 
     assert all(

@@ -66,8 +66,14 @@ class ChannelBranch:
     branch_name: str
 
 
-def autodetect_cros_channels(git_repo: Path) -> dict[Channel, ChannelBranch]:
-    """Autodetects the current ChromeOS channels from a git repo.
+def autodetect_cros_afdo_channels(
+    git_repo: Path,
+) -> dict[Channel, ChannelBranch]:
+    """Autodetects the ChromeOS channels tracked by AFDO from a git repo.
+
+    Note that AFDO only tracks `main` (as CANARY) and release branches destined
+    for Stable (even-numbered milestones, as BETA and STABLE), skipping
+    odd-numbered release branches.
 
     Returns:
         A map of channels to their associated git branches. There will be one
@@ -98,16 +104,21 @@ def autodetect_cros_channels(git_repo: Path) -> dict[Channel, ChannelBranch]:
             )
 
     branches.sort(key=lambda x: x.release_number)
-    if len(branches) < 2:
-        raise ValueError(
-            f"Expected at least two branches, but only found {len(branches)}"
-        )
-
-    stable = branches[-2]
-    beta = branches[-1]
+    # b/553439910: ChromeOS only promotes even-numbered milestones to stable;
+    # odd-numbered branches are truncated after beta. Select the two most recent
+    # non-main even branches for beta and stable, while main (canary) always
+    # advances one milestone ahead of the newest branch overall.
+    reversed_even_branches = (
+        x for x in reversed(branches) if x.release_number % 2 == 0
+    )
+    beta = next(reversed_even_branches, None)
+    stable = next(reversed_even_branches, None)
+    if beta is None or stable is None:
+        raise ValueError("Expected at least two even branches")
+    newest_branch = branches[-1]
     canary = ChannelBranch(
-        remote=beta.remote,
-        release_number=beta.release_number + 1,
+        remote=newest_branch.remote,
+        release_number=newest_branch.release_number + 1,
         branch_name="main",
     )
     return {
