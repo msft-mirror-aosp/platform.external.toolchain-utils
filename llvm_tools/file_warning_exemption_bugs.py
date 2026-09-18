@@ -128,6 +128,7 @@ def format_warning_bug_body(
     package: warning_exemption.Package,
     warnings: list[str],
     builders: list[warning_exemption.Builder],
+    suggested_component: int | None = None,
 ) -> str:
     """Returns a suitable body for the given bug."""
     pieces: list[str] = []
@@ -175,6 +176,10 @@ def format_warning_bug_body(
             """
         )
     )
+    if suggested_component:
+        pieces.append(
+            f"\n(Suggested component number `{suggested_component}`)\n"
+        )
     return "".join(pieces)
 
 
@@ -377,6 +382,7 @@ def format_bug_from_package_warnings(
     severe_warnings: set[str],
     package_warnings: warning_exemption.YamlPackageWarnings,
     component: int | None,
+    gemini_first_pass: bool = False,
 ) -> str:
     warnings = package_warnings.warning_names
     package = package_warnings.package
@@ -391,6 +397,15 @@ def format_bug_from_package_warnings(
         title += " is"
     title += f" being suppressed in {package}"
 
+    if gemini_first_pass:
+        bug_component = bugs.INTERNAL_CROSTC_COMPONENT
+        assignee: str | None = crostc_contact
+        suggested_component = component
+    else:
+        bug_component = component or bugs.INTERNAL_CROSTC_COMPONENT
+        assignee = None if component else crostc_contact
+        suggested_component = None
+
     return bugs.format_bug(
         title=title,
         body=format_warning_bug_body(
@@ -399,9 +414,10 @@ def format_bug_from_package_warnings(
             package,
             warnings,
             package_warnings.observed_on,
+            suggested_component=suggested_component,
         ),
-        component=component or bugs.INTERNAL_CROSTC_COMPONENT,
-        assignee=None if component else crostc_contact,
+        component=bug_component,
+        assignee=assignee,
         parent=parent_bug,
         priority=(
             bugs.Priority.P1
@@ -471,6 +487,16 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     )
     parser.add_argument(
         "--debug", action="store_true", help="Enable debug logging"
+    )
+    parser.add_argument(
+        "--gemini-first-pass",
+        action="store_true",
+        help="""
+        Always file bugs against the roll owner (--crostc-contact) in the
+        default toolchain component, appending any inferred component number to
+        the bug body as a suggestion. The intent is that the --crostc-contact
+        will use Gemini to make a first pass of cleaning the new issues up.
+        """,
     )
     parser.add_argument(
         "--input",
@@ -568,6 +594,7 @@ def main(argv: list[str]) -> None:
             severe_warnings=severe_warnings,
             package_warnings=warnings,
             component=component,
+            gemini_first_pass=opts.gemini_first_pass,
         )
         for warnings, component in zip(bugworthy_warnings, components)
     ]

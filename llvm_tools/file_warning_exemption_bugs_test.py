@@ -159,6 +159,60 @@ class Test(test_helpers.TempDirTestCase):
             )
         )
 
+    def test_format_bug_from_package_warnings_default(self) -> None:
+        exemption = warning_exemption.YamlPackageWarnings(
+            package=warning_exemption.Package("foo", "bar"),
+            warning_lines=[],
+            warning_names=["baz"],
+            observed_on=[],
+        )
+        bug = fweb.format_bug_from_package_warnings(
+            exemption_file_name="warning_suppressions_r123.go",
+            parent_bug=1,
+            crostc_contact="contact_user",
+            severe_warnings=set(),
+            package_warnings=exemption,
+            component=123456,
+        )
+        self.assertIn("COMPONENT=123456\n", bug)
+        self.assertNotIn("ASSIGNEE=", bug)
+        self.assertNotIn("(Suggested component number", bug)
+
+    def test_format_bug_from_package_warnings_gemini_first_pass(self) -> None:
+        exemption = warning_exemption.YamlPackageWarnings(
+            package=warning_exemption.Package("foo", "bar"),
+            warning_lines=[],
+            warning_names=["baz"],
+            observed_on=[],
+        )
+        bug_with_component = fweb.format_bug_from_package_warnings(
+            exemption_file_name="warning_suppressions_r123.go",
+            parent_bug=1,
+            crostc_contact="contact_user",
+            severe_warnings=set(),
+            package_warnings=exemption,
+            component=123456,
+            gemini_first_pass=True,
+        )
+        self.assertIn("COMPONENT=1034879\n", bug_with_component)
+        self.assertIn("ASSIGNEE=contact_user\n", bug_with_component)
+        self.assertIn(
+            "\n\n(Suggested component number `123456`)\n", bug_with_component
+        )
+
+        bug_without_component = fweb.format_bug_from_package_warnings(
+            exemption_file_name="warning_suppressions_r123.go",
+            parent_bug=1,
+            crostc_contact="contact_user",
+            severe_warnings=set(),
+            package_warnings=exemption,
+            component=None,
+            gemini_first_pass=True,
+        )
+        self.assertIn("COMPONENT=1034879\n", bug_without_component)
+        self.assertIn("ASSIGNEE=contact_user\n", bug_without_component)
+        self.assertNotIn("(Suggested component number", bug_without_component)
+
 
 class FindEbuildDirMetadataTest(test_helpers.TempDirTestCase):
     """Tests for ebuild DIR_METADATA location."""
