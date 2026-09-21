@@ -14,132 +14,52 @@ version.
 **NOTE: sudo must be permissive (i.e. **`cros_sdk`** should NOT prompt for a
 password)**
 
-## `update_packages_and_run_tests.py`
+## update_packages_and_run_tests
 
 ### Usage
 
-This script is used for updating a package's LLVM hash (sys-devel/llvm,
-sys-libs/compiler-rt, sys-libs/libcxx, and sys-libs/llvm-libunwind)
-and then run tests after updating the git hash. There are three ways to test
-the change, including starting tryjobs, recipe builders or using cq+1.
+This script uploads CLs necessary to run LLVM testing at an arbitrary SHA, and
+optionally kicks off a CQ run.
 
-An example when this script should be run is when certain boards would like
-to be tested with the updated `LLVM_NEXT_HASH`.
-
-For example:
+For example, to upload CLs for testing `llvm-next` and trigger CQ+1:
 
 ```
-$ ./update_packages_and_run_tests.py \
-  --is_llvm_next \
-  --llvm_version tot \
-  tryjobs \
-  --options nochromesdk latest-toolchain \
-  --builders kevin-release-tryjob nocturne-release-tryjob
+$ ./py/bin/llvm_tools/update_packages_and_run_tests \
+  --sha llvm-next \
+  --cq
 ```
 
-The above example would update the packages' `LLVM_NEXT_HASH` to the top of
-trunk's git hash and would submit tryjobs for kevin and nocturne boards, passing
-in 'nochromesdk' and 'latest-toolchain' for each tryjob.
+Similarly, for updating to `google3` and testing with CQ+1:
+
+```
+$ ./py/bin/llvm_tools/update_packages_and_run_tests \
+  --sha google3 \
+  --cq
+```
 
 For help with the command line arguments of the script, run:
 
 ```
-$ ./update_packages_and_run_tests.py --help
+$ ./py/bin/llvm_tools/update_packages_and_run_tests --help
 ```
 
-Similarly as the previous example, but for updating `LLVM_HASH` to
-google3 and test with cq+1:
-
-```
-$ ./update_packages_and_run_tests.py \
-  --llvm_version google3 \
-  cq
-```
-
-Similarly as the previous example, but for updating `LLVM_NEXT_HASH` to
-the git hash of revision 367622 and test with recipe builders:
-
-```
-$ ./update_packages_and_run_tests.py \
-  --is_llvm_next \
-  --llvm_version 367622 \
-  recipe \
-  --options -nocanary \
-  --builders chromeos/toolchain/kevin-llvm chromeos/toolchain/nocturne-llvm
-```
-
-## `update_chromeos_llvm_hash.py`
+## patch_manager
 
 ### Usage
 
-This script is used for updating a package's/packages' LLVM hashes and
-creating a change list of those changes which will uploaded for review. For
-example, some changes that would be included in the change list are
-the updated ebuilds, changes made to the patches of the updated packages such
-as being removed or an updated patch metadata file. These changes are determined
-by the `--failure_mode` option.
-
-An example where this script would be used is when multiple packages need to
-have their `LLVM_NEXT_HASH` updated.
-
-For example:
-
-```
-$ ./update_chromeos_llvm_hash.py \
-  --update_packages sys-devel/llvm sys-libs/compiler-rt \
-  --is_llvm_next \
-  --llvm_version google3 \
-  --failure_mode disable_patches
-```
-
-The example above would update sys-devel/llvm and sys-libs/compiler-rt's
-`LLVM_NEXT_HASH` to the latest google3's git hash of LLVM. And the change list
-may include patches that were disabled for either sys-devel/llvm or
-sys-libs/compiler-rt.
-
-For help with the command line arguments of the script, run:
-
-```
-$ ./update_chromeos_llvm_hash.py --help
-```
-
-For example, to update `LLVM_HASH` to top of trunk of LLVM:
-
-```
-$ ./update_chromeos_llvm_hash.py \
-  --update_packages sys-devel/llvm sys-libs/compiler-rt \
-  --llvm_version tot \
-  --failure_mode disable_patches
-```
-
-For example, to create a roll CL to the git hash of revision 367622:
-
-```
-$ ./update_chromeos_llvm_hash.py \
-  --update_packages sys-devel/llvm sys-libs/compiler-rt \
-  sys-libs/libcxx sys-libs/llvm-libunwind \
-  'dev-util/lldb-server' \
-  --llvm_version 367622 \
-  --failure_mode disable_patches
-```
-
-## `patch_manager.py`
-
-### Usage
-
-This script is used when when all the command line arguments are known such as
+This script is used when all the command line arguments are known such as
 testing a specific metadata file or a specific source tree.
 
 For help with the command line arguments of the script, run:
 
 ```
-$ ./patch_manager.py --help
+$ ./py/bin/llvm_tools/patch_manager --help
 ```
 
 For example, to see all the failed (if any) patches:
 
 ```
-$ ./patch_manager.py \
+$ ./py/bin/llvm_tools/patch_manager \
   --svn_version 367622 \
   --patch_metadata_file /abs/path/to/patch/file \
   --src_path /abs/path/to/src/tree \
@@ -149,35 +69,11 @@ $ ./patch_manager.py \
 For example, to disable all patches that failed to apply:
 
 ```
-$ ./patch_manager.py \
+$ ./py/bin/llvm_tools/patch_manager \
   --svn_version 367622 \
   --patch_metadata_file /abs/path/to/patch/file \
   --src_path /abs/path/to/src/tree \
   --failure_mode disable_patches
-```
-
-For example, to bisect a failing patch and stop at the first bisected patch:
-
-```
-$ ./patch_manager.py \
-  --svn_version 367622 \
-  --patch_metadata_file /abs/path/to/patch/file \
-  --src_path /abs/path/to/src/tree \
-  --failure_mode bisect_patches \
-  --good_svn_version 365631
-```
-
-For example, to bisect a failing patch and then continue bisecting the rest of
-the failed patches:
-
-```
-$ ./patch_manager.py \
-  --svn_version 367622 \
-  --patch_metadata_file /abs/path/to/patch/file \
-  --src_path /abs/path/to/src/tree \
-  --failure_mode bisect_patches \
-  --good_svn_version 365631 \
-  --continue_bisection True
 ```
 
 ## Other Helpful Scripts
@@ -224,35 +120,35 @@ from get_llvm_hash import GetGoogle3LLVMVersion
 GetGoogle3LLVMVersion(stable=True)
 ```
 
-### `git_llvm_rev.py`
+### git_llvm_rev
 
 This script is meant to synthesize LLVM revision numbers, and translate between
 these synthesized numbers and git SHAs. Usage should be straightforward:
 
 ```
-~> ./git_llvm_rev.py --llvm_dir llvm-project-copy/ --rev r380000
+~> ./py/bin/llvm_tools/git_llvm_rev --llvm_dir llvm-project-copy/ --rev r380000
 6f635f90929da9545dd696071a829a1a42f84b30
-~> ./git_llvm_rev.py --llvm_dir llvm-project-copy/ --sha 6f635f90929da9545dd696071a829a1a42f84b30
+~> ./py/bin/llvm_tools/git_llvm_rev --llvm_dir llvm-project-copy/ --sha 6f635f90929da9545dd696071a829a1a42f84b30
 r380000
-~> ./git_llvm_rev.py --llvm_dir llvm-project-copy/ --sha origin/some-branch
+~> ./py/bin/llvm_tools/git_llvm_rev --llvm_dir llvm-project-copy/ --sha origin/some-branch
 r387778
 ```
 
 **Tip**: if you put a symlink called `git-llvm-rev` to this script somewhere on
 your `$PATH`, you can also use it as `git llvm-rev`.
 
-### `get_patch.py`
+### get_patch
 
 #### Usage
 
 This script updates the proper ChromeOS packages with LLVM patches of your
 choosing, and copies the patches into patch folders of the packages. This tool
-supports both git hash of commits as well as differential reviews.
+supports both git hashes of commits as well as GitHub pull requests.
 
 Usage:
 
 ```
-get_patch.py --start-ref="HEAD" 47413bb27 p:74791
+$ ./py/bin/llvm_tools/get_patch --start-ref="HEAD" 47413bb27 p:74791
 ```
 
 It tries to autodetect a lot of things. For more information, please see the
@@ -286,33 +182,24 @@ In the above example, the tool will scan all commits between 123abc and 223abc,
 and all commits between 123abc and 323abc for reverts of commits which are
 parents of 123abc.
 
-### `nightly_revert_checker.py`
+### nightly_revert_checker
 
 This is an automated wrapper around `revert_checker.py`. It checks to see if any
 new reverts happened across toolchains that we're trying to ship since it was
-last run. If so, it either automatically cherry-picks the reverts, or sends
-emails to appropriate groups.
+last run. If so, it automatically cherry-picks the reverts or files a bug.
 
 Usage example for cherry-picking:
 ```
-PYTHONPATH=../ ./nightly_revert_checker.py \
-  cherry-pick
+$ ./py/bin/llvm_tools/nightly_revert_checker \
   --state_file state.json \
   --llvm_dir llvm-project-copy \
-  --chromeos_dir ../../../../
-  --reviewers=chromium-os-mage@google.com
+  --reviewers=chromium-os-mage@google.com \
+  cherry-pick \
+  chromeos \
+  --chromeos_dir ../../../
 ```
 
-Usage example for email:
-```
-PYTHONPATH=../ ./nightly_revert_checker.py \
-  email
-  --state_file state.json \
-  --llvm_dir llvm-project-copy \
-  --chromeos_dir ../../../../
-```
-
-### `werror_logs.py`
+### werror_logs
 
 This tool exists to help devs reason about `-Werror` instances that _would_
 break builds, were the `FORCE_DISABLE_WERROR` support in the compiler wrapper
@@ -321,11 +208,11 @@ not enabled.
 Usage example:
 
 ```
-$ ./werror_logs.py aggregate \
+$ ./py/bin/llvm_tools/werror_logs aggregate \
     --directory=${repo}/out/sdk/tmp/portage/dev-cpp/gtest-1.13.0-r12/cros-artifacts
 ```
 
-## `fetch_cq_size_diff.py`
+## fetch_cq_size_diff
 
 This script should be runnable both inside and outside of the chroot.
 
@@ -334,21 +221,22 @@ capable of comparing the sizes of ChromeOS images, and the size of Chrome's
 debuginfo. An example of this is:
 
 ```
-$ ./fetch_cq_size_diff.py --image gs \
-  gs://chromeos-image-archive/asurada-release/R122-15712.0.0/image.zip
+$ ./py/bin/llvm_tools/fetch_cq_size_diff --image gs \
+  gs://chromeos-image-archive/asurada-release/R122-15712.0.0/image.zip \
   gs://chromeos-image-archive/asurada-cq/R122-15712.0.0-92036-8761629109681962289/image.zip
 ```
 
-For convenience, this script can also figure out what to compare from a CL, like
-so:
+For convenience, this script can also figure out what to compare from two CLs'
+CQ runs, like so:
 
 ```
-$ ./fetch_cq_size_diff.py --image cl \
-  https://chromium-review.googlesource.com/c/chromiumos/overlays/board-overlays/+/5126116/3
+$ ./py/bin/llvm_tools/fetch_cq_size_diff --image cl \
+  --baseline-cl https://chromium-review.googlesource.com/c/chromiumos/overlays/chromiumos-overlay/+/5126115/1 \
+  --new-cl https://chromium-review.googlesource.com/c/chromiumos/overlays/board-overlays/+/5126116/3
 ```
 
-In the above case, this script will find a completed CQ build associated with
-PatchSet 3 of the given CL, and compare the `image.zip` generated by said build
-with the image.zip generated by a release builder for the same board. CQ
-attempts don't have to be entirely green for this; as long as there're a few
-green boards to pick from, this script should be able to make a comparison.
+In the above case, this script will find a completed CQ builder shared between
+the given patchsets of `--baseline-cl` and `--new-cl`, and compare the
+`image.zip` artifacts generated by those builds against each other. CQ attempts
+don't have to be entirely green for this; as long as there's a shared green
+board between the two runs, this script should be able to make a comparison.
