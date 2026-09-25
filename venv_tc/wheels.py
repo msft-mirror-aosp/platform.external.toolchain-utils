@@ -379,6 +379,29 @@ def validate_files_against_manifest(
     return [res for res in results if res]
 
 
+STALE_WHEEL_EXPIRY_SECONDS = 14 * 24 * 60 * 60
+
+
+def remove_stale_wheels(wheel_dir: Path, manifest: WheelManifest) -> None:
+    """Deletes any .whl files in wheel_dir not present in manifest."""
+    if not wheel_dir.exists():
+        return
+    now = time.time()
+    for existing_file in wheel_dir.glob("*.whl"):
+        if existing_file.name in manifest.wheel_hashes:
+            continue
+        # Refuse to auto-clean wheels < 14 days old: if someone is e.g.
+        # bisecting toolchain-utils, it's not great to have to delete and
+        # redownload wheels on every iteration.
+        if now - existing_file.stat().st_mtime < STALE_WHEEL_EXPIRY_SECONDS:
+            continue
+        logging.info(
+            "Removing stale wheel file not in manifest: %s",
+            existing_file.name,
+        )
+        existing_file.unlink()
+
+
 def ensure_downloaded(venv_dir: Path, clean: bool) -> None:
     """Ensures that wheels/ contains all wheels in the wheel-manifest.
 
@@ -391,6 +414,8 @@ def ensure_downloaded(venv_dir: Path, clean: bool) -> None:
         shutil.rmtree(wheel_dir)
 
     manifest = read_wheel_manifest(venv_dir)
+    if not clean:
+        remove_stale_wheels(wheel_dir, manifest)
 
     with multiprocessing.pool.ThreadPool() as pool:
         logging.info("Validating local wheels...")

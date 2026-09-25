@@ -6,7 +6,9 @@
 
 import hashlib
 import multiprocessing.pool
+import os
 from pathlib import Path
+import time
 from unittest import mock
 
 from llvm_tools import test_helpers
@@ -267,3 +269,47 @@ class WheelsTest(test_helpers.TempDirTestCase):
         self.assertEqual(
             broken_files_arg, {invalid_wheel_name, missing_wheel_name}
         )
+
+    def test_ensure_downloaded_removes_stale_wheels(self) -> None:
+        old_mtime = time.time() - wheels.STALE_WHEEL_EXPIRY_SECONDS - 100
+
+        valid_name = "valid.whl"
+        valid_file = self.wheel_dir / valid_name
+        valid_content = b"valid content"
+        valid_file.write_bytes(valid_content)
+        os.utime(valid_file, (old_mtime, old_mtime))
+        valid_hash = hashlib.sha512(valid_content).hexdigest()
+
+        stale_file = self.wheel_dir / "stale_wheel-1.0.0-py3-none-any.whl"
+        stale_file.write_bytes(b"stale content")
+        os.utime(stale_file, (old_mtime, old_mtime))
+
+        manifest = wheels.WheelManifest(wheel_hashes={valid_name: valid_hash})
+        wheels.write_wheel_manifest(self.venv_dir, manifest)
+
+        wheels.ensure_downloaded(self.venv_dir, clean=False)
+
+        self.assertTrue(valid_file.exists())
+        self.assertFalse(stale_file.exists())
+        self.mock_fetch.assert_not_called()
+
+    def test_ensure_downloaded_keeps_nonstale_wheels(self) -> None:
+        valid_name = "valid.whl"
+        valid_file = self.wheel_dir / valid_name
+        valid_content = b"valid content"
+        valid_file.write_bytes(valid_content)
+        valid_hash = hashlib.sha512(valid_content).hexdigest()
+
+        nonstale_file = self.wheel_dir / "nonstale_wheel-1.0.0-py3-none-any.whl"
+        nonstale_file.write_bytes(b"recent unreferenced content")
+        recent_mtime = time.time() - wheels.STALE_WHEEL_EXPIRY_SECONDS + 100
+        os.utime(nonstale_file, (recent_mtime, recent_mtime))
+
+        manifest = wheels.WheelManifest(wheel_hashes={valid_name: valid_hash})
+        wheels.write_wheel_manifest(self.venv_dir, manifest)
+
+        wheels.ensure_downloaded(self.venv_dir, clean=False)
+
+        self.assertTrue(valid_file.exists())
+        self.assertTrue(nonstale_file.exists())
+        self.mock_fetch.assert_not_called()
