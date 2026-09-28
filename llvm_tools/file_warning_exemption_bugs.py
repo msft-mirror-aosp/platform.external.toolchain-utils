@@ -20,6 +20,7 @@ import logging
 import multiprocessing.pool
 from pathlib import Path
 import re
+import shlex
 import subprocess
 import sys
 import textwrap
@@ -638,8 +639,9 @@ def main(argv: list[str]) -> None:
         out_dir,
     )
     logging.info(
-        "If you're sure the above looks good, please `cd` into your "
-        "output directory, and run the following command:\n"
-        "bash -c 'for x in *; do bugged create --format=markdown < ${x} || "
-        "break; done'"
+        "If you're sure the above looks good, please run the following "
+        "command:\n"
+        'for x in %s/*; do bugged create --format=markdown < "${x}" || '
+        "break; done",
+        shlex.quote(str(out_dir.resolve())),
     )
