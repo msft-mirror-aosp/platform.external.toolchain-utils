@@ -623,7 +623,7 @@ def main(argv: list[str]) -> None:
         per_package_warnings=yaml_file.per_package_warnings,
         frozen_per_package_warnings=yaml_file.frozen_per_package_warnings,
     ):
-        f = out_dir / "followup-bug"
+        f = out_dir / "followup-bug.bugged"
         logging.debug("Writing followup bug %s...", f)
         f.write_text(followup_bug, encoding="utf-8")
 
