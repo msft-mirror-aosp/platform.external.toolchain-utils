@@ -591,18 +591,33 @@ def do_cherrypick(
     return new_state
 
 
+# Per `git-interpret-trailers(1)`, any line starting with `---` followed by
+# whitespace or end-of-line (even with text after the whitespace, such as
+# `--- a/foo.c` in an inline diff) is treated as the divider between the
+# commit message and the patch.
+_PATCH_DIVIDER_RE = re.compile(r"^---(?:\s|$)")
+_FOOTER_KEY_RE = re.compile(r"^\S+:")
+
+
 def _append_footers_to_commit_message(
     message: str, footers: Iterable[str]
 ) -> str:
-    lines = message.rstrip().splitlines()
-    footer_key_re = re.compile(r"^\S+:")
+    # If an upstream commit message contains a patch divider line (e.g., a
+    # Markdown `---` horizontal rule or inline diff), Gerrit's `commit-msg`
+    # hook places `Change-Id:` above the `---` line instead of in the footer,
+    # causing Gerrit to reject the push. Prepend an extra `-` to neutralize
+    # these divider lines.
+    lines = [
+        f"-{line}" if _PATCH_DIVIDER_RE.match(line) else line
+        for line in message.rstrip().splitlines()
+    ]
 
     footer_block = []
     nonfooter_block = lines
 
     # Parse out existing footers. Footers may/may not exist in a previous
     # commit. If they do, they all exist in the last paragraph of a commit
-    # message, and they all match `footer_key_re`.
+    # message, and they all match `_FOOTER_KEY_RE`.
     for i, line in reversed(list(enumerate(lines))):
         if not line:
             nonfooter_block = lines[:i]
@@ -611,7 +626,7 @@ def _append_footers_to_commit_message(
 
         # If this line isn't a valid footer line, the paragraph we're in isn't
         # a series of footers.
-        if not footer_key_re.search(line):
+        if not _FOOTER_KEY_RE.search(line):
             break
 
     footer_block += footers

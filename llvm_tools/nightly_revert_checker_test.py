@@ -434,6 +434,43 @@ class Test(unittest.TestCase):
             want_message,
         )
 
+    def test_appending_footers_escapes_patch_dividers(self) -> None:
+        base_message = textwrap.dedent(
+            """\
+            Revert "[Clang] prevent constexpr crash on invalid overrides"
+
+            Reverts #184048
+
+            ---
+
+            The original change marks invalid overrides too early.
+            --- a/clang/lib/Sema/SemaDecl.cpp
+            ---- already four dashes
+            """
+        ).rstrip()
+        want_message = textwrap.dedent(
+            """\
+            Revert "[Clang] prevent constexpr crash on invalid overrides"
+
+            Reverts #184048
+
+            ----
+
+            The original change marks invalid overrides too early.
+            ---- a/clang/lib/Sema/SemaDecl.cpp
+            ---- already four dashes
+
+            foo: bar
+            """
+        ).rstrip()
+        self.assertEqual(
+            nightly_revert_checker._append_footers_to_commit_message(
+                base_message,
+                ("foo: bar",),
+            ),
+            want_message,
+        )
+
 
 @mock.patch.object(git_llvm_rev, "translate_sha_to_rev", autospec=True)
 class RevertsOldCommitTest(unittest.TestCase):
