@@ -16,3 +16,5 @@
   COFF/DirectX-specific files.
 - MLIR-specific: Paths with `mlir/`, or generic files where changes only
   affect MLIR.
+- MIPS-specific: Paths with `/Target/Mips/` or `/Mips/`, or generic files where
+  changes only affect MIPS.

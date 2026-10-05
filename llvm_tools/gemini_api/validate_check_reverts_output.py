@@ -428,6 +428,10 @@ GOLDEN_SHAS: tuple[str, ...] = (
     "7cccf56ce6bb98cd685ad67b8e4db9293768741c",
     "ce1a9fd76640929fe340c5c5d1bb493ea09ca9bc",
     "b87be02cc74db3a929b4b72a26f2577dc8b7fa11",
+    # MIPS reverts/relands.
+    "1b7fd9a213fad7014c92d1cbb58373e00e2548c7",
+    "7e62ac165f852f19700a73261cd48799cf868407",
+    "9f7fff19a1da1041f841c6ced80726ec3777b855",
     # Intersections of dont care categories (reverts/relands).
     "ce553ab69f0f1bad780c6f0f8b4e14d71121b274",
     "c25e77436ea44b4c980f4974dee8984298d13a08",
