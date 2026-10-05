@@ -31,7 +31,7 @@ running `patch_sync transpose ...` with the necessary arguments.
 
 This command will:
 
-1. Sync the Android toolchain and ChromiumOS overlay repositories.
+1. Sync the Android toolchain and ChromiumOS toolchain-utils repositories.
 2. Find any new patches between the current version and the base ref.
 3. Copy any new and applicable patches into each repository.
 
@@ -41,5 +41,5 @@ This command will:
   --aosp-checkout "${HOME}/android" \
   --aosp-base-ref "${base_aosp_git_hash}" \
   --cros-checkout "${HOME}/chromiumos" \
-  --overlay-base-ref "${base_cros_git_hash}"
+  --tc-base-ref "${base_cros_git_hash}"
 ```
