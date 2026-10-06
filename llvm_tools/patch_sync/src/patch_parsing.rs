@@ -6,10 +6,16 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::fs::{copy, read_to_string, File};
 use std::io::{BufRead, BufReader, Read, Write};
 use std::path::{Path, PathBuf};
+use std::sync::LazyLock;
 
 use anyhow::{anyhow, bail, Context, Result};
+use regex::Regex;
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use sha2::{Digest, Sha256};
+
+static CHERRY_PATH_MATCHER: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^cherry/([0-9A-Fa-f]{40})(?:-.*)?\.patch$").unwrap());
 
 /// JSON serde struct.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -37,6 +43,32 @@ impl PatchDictSchema {
     /// applies to.
     pub fn get_until_version(&self) -> Option<u64> {
         self.version_range.and_then(|x| x.until)
+    }
+
+    /// Return a new PatchDictSchema with an inferred
+    /// original_sha entry in the metadata.
+    pub fn infer_original_sha(self) -> PatchDictSchema {
+        // If we have the original_sha already, or the patch path is malformed,
+        // skip adding the original_sha.
+        if self
+            .metadata
+            .as_ref()
+            .and_then(|m| m.get("original_sha"))
+            .is_some()
+        {
+            return self;
+        }
+        if let Some(captures) = CHERRY_PATH_MATCHER.captures(&self.rel_patch_path) {
+            // We know the capture exists because the match above succeeds.
+            let cherry_name = captures.get(1).unwrap().as_str();
+            let mut new_metadata = self.metadata.unwrap_or_default();
+            new_metadata.insert("original_sha".to_owned(), json!(cherry_name));
+            return Self {
+                metadata: Some(new_metadata),
+                ..self
+            };
+        }
+        self
     }
 }
 
@@ -85,11 +117,10 @@ impl PatchCollection {
     }
 
     /// Map over the patches.
-    pub fn map_patches(&self, f: impl FnMut(&PatchDictSchema) -> PatchDictSchema) -> Self {
+    pub fn map_patches(self, f: impl FnMut(PatchDictSchema) -> PatchDictSchema) -> Self {
         Self {
-            patches: self.patches.iter().map(f).collect(),
-            workdir: self.workdir.clone(),
-            indent_len: self.indent_len,
+            patches: self.patches.into_iter().map(f).collect(),
+            ..self
         }
     }
 
@@ -374,7 +405,7 @@ pub fn new_patches(
         platforms.extend(["android".to_string(), "chromiumos".to_string()]);
         PatchDictSchema {
             platforms: platforms.union(&p.platforms).cloned().collect(),
-            ..p.to_owned()
+            ..p
         }
     });
     Ok(PatchTemporalDiff {
@@ -663,6 +694,43 @@ mod test {
         let collection = fixture[0].update_version_ranges(&[("a".into(), new_version_range)]);
         assert_eq!(collection.patches[0].version_range, new_version_range);
         assert_eq!(collection.patches[1], fixture[1].patches[1]);
+    }
+
+    #[test]
+    fn test_infer_original_sha() {
+        let mock_sha = "a".repeat(40);
+        let patch = PatchDictSchema {
+            rel_patch_path: format!("cherry/{}-v2.patch", mock_sha).into(),
+            metadata: None,
+            platforms: Default::default(),
+            version_range: Some(VersionRange {
+                from: Some(0),
+                until: Some(1),
+            }),
+        };
+        let mut expected_metadata = BTreeMap::new();
+        expected_metadata.insert("original_sha".into(), json!(mock_sha));
+        let mut expected_patch = patch.clone();
+        expected_patch.metadata = Some(expected_metadata);
+        assert_eq!(patch.infer_original_sha(), expected_patch);
+    }
+
+    #[test]
+    fn test_no_infer_original_sha() {
+        let mock_sha = "a".repeat(40);
+        let mut metadata = BTreeMap::new();
+        metadata.insert("original_sha".into(), json!(mock_sha));
+        let metadata = Some(metadata);
+        let patch = PatchDictSchema {
+            rel_patch_path: format!("cherry/{}.patch", mock_sha).into(),
+            metadata,
+            platforms: Default::default(),
+            version_range: Some(VersionRange {
+                from: Some(0),
+                until: Some(1),
+            }),
+        };
+        assert_eq!(patch.clone().infer_original_sha(), patch);
     }
 
     fn version_range_fixture() -> Vec<PatchCollection> {

@@ -104,16 +104,15 @@ fn show_subcmd(args: ShowOpt) -> Result<()> {
                 // Need to do this platforms creation as Rust 1.55 cannot use "from".
                 let mut platforms = BTreeSet::new();
                 platforms.insert(platform.to_string());
-                PatchDictSchema {
-                    platforms,
-                    ..p.clone()
-                }
+                PatchDictSchema { platforms, ..p }
             })
         })
     };
     let cur_cros_collection = make_collection("chromiumos", &ctx.cros_patches_path())?;
     let cur_android_collection = make_collection("android", &ctx.android_patches_path())?;
-    let merged = cur_cros_collection.union(&cur_android_collection)?;
+    let merged = cur_cros_collection
+        .union(&cur_android_collection)?
+        .map_patches(PatchDictSchema::infer_original_sha);
     println!("{}", merged.serialize_patches()?);
     Ok(())
 }
@@ -200,7 +199,8 @@ fn transpose_subcmd(args: TransposeOpt) -> Result<()> {
     if args.verbose {
         println!("Android LLVM version: r{}", android_llvm_version);
     }
-    let new_cros_patches = filter_patches_by_version(&new_cros_patches, android_llvm_version);
+    let new_cros_patches = filter_patches_by_version(&new_cros_patches, android_llvm_version)
+        .map_patches(PatchDictSchema::infer_original_sha);
 
     let chromiumos_llvm_cur_version: u64 = {
         let chromiumos_llvm_version_str: String =
@@ -241,9 +241,12 @@ fn transpose_subcmd(args: TransposeOpt) -> Result<()> {
     }
 
     let new_android_patches =
-        filter_patches_by_version(&new_android_patches, chromiumos_llvm_cur_version).union(
-            &filter_patches_by_version(&new_android_patches, chromiumos_llvm_next_version),
-        )?;
+        filter_patches_by_version(&new_android_patches, chromiumos_llvm_cur_version)
+            .union(&filter_patches_by_version(
+                &new_android_patches,
+                chromiumos_llvm_next_version,
+            ))?
+            .map_patches(PatchDictSchema::infer_original_sha);
 
     // Need to filter version updates to only existing patches to the other platform.
     let cros_version_updates =
