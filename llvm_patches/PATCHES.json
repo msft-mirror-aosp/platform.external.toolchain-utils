@@ -1047,5 +1047,266 @@
       "from": 596125,
       "until": 596126
     }
+  },
+  {
+    "metadata": {
+      "author": "Simon Pilgrim <llvm-dev@redking.me.uk>",
+      "info": [],
+      "original_sha": "28e024fb9d42fd44e0ad70638da0b6a12ba544dc",
+      "title": "[X86] narrowBitOpRMW - allow additional uses of the BTC/R/S result (#166376)"
+    },
+    "platforms": [
+      "android",
+      "chromiumos"
+    ],
+    "rel_patch_path": "cherry/28e024fb9d42fd44e0ad70638da0b6a12ba544dc.patch",
+    "version_range": {
+      "from": 596125,
+      "until": 596209
+    }
+  },
+  {
+    "metadata": {
+      "author": "Simon Pilgrim <llvm-dev@redking.me.uk>",
+      "info": [],
+      "original_sha": "ee0818a1f1fab4303eeb1263ac1f6b22f3fe2110",
+      "title": "[X86] Add test coverage for #166744 (#166745)"
+    },
+    "platforms": [
+      "android",
+      "chromiumos"
+    ],
+    "rel_patch_path": "cherry/ee0818a1f1fab4303eeb1263ac1f6b22f3fe2110.patch",
+    "version_range": {
+      "from": 596125,
+      "until": 596366
+    }
+  },
+  {
+    "metadata": {
+      "author": "Simon Pilgrim <llvm-dev@redking.me.uk>",
+      "info": [],
+      "original_sha": "0663710a59e643716f6b2b3e86c7b4a007c2db07",
+      "title": "[X86] narrowBitOpRMW/combineTruncate - don't retain pointer info for unknown offset load/stores (#166752)"
+    },
+    "platforms": [
+      "android",
+      "chromiumos"
+    ],
+    "rel_patch_path": "cherry/0663710a59e643716f6b2b3e86c7b4a007c2db07.patch",
+    "version_range": {
+      "from": 596125,
+      "until": 596368
+    }
+  },
+  {
+    "metadata": {
+      "author": "David Brittain <combinatorial@users.noreply.github.com>",
+      "info": [],
+      "original_sha": "564b027db16dc14c2027cd5a2fbb8bf1d3877b85",
+      "title": "[clang][Modules] Keep current-TU global-module-fragment internal-linkage functions viable in overload resolution (#210825)"
+    },
+    "platforms": [
+      "android",
+      "chromiumos"
+    ],
+    "rel_patch_path": "cherry/564b027db16dc14c2027cd5a2fbb8bf1d3877b85.patch",
+    "version_range": {
+      "from": 574158,
+      "until": 627322
+    }
+  },
+  {
+    "metadata": {
+      "author": "George Burgess IV <george.burgess.iv@gmail.com>",
+      "info": [],
+      "original_sha": "10d4bdf93a82fb290b8c55da6ed19ff54da67296",
+      "title": "[libc++] Opt `std::*set` out of map key extraction optimization (#220452)"
+    },
+    "platforms": [
+      "android",
+      "chromiumos"
+    ],
+    "rel_patch_path": "cherry/10d4bdf93a82fb290b8c55da6ed19ff54da67296.patch",
+    "version_range": {
+      "from": 596125,
+      "until": 634225
+    }
+  },
+  {
+    "metadata": {
+      "author": "Pavel Labath <pavel@labath.sk>",
+      "info": [],
+      "original_sha": "a98ecc9027426941851ac32ff75cb599acf49221",
+      "title": "Revert \"[lldb][DWARFASTParserClang] Handle pointer-to-member-data non-type te…\" (#191798)"
+    },
+    "platforms": [
+      "chromiumos"
+    ],
+    "rel_patch_path": "cherry/a98ecc9027426941851ac32ff75cb599acf49221.patch",
+    "version_range": {
+      "from": 613717,
+      "until": 614343
+    }
+  },
+  {
+    "metadata": {
+      "author": "Sam Elliott <aelliott@qti.qualcomm.com>",
+      "info": [],
+      "original_sha": "501417baa60f2eb0a66ca3bb04caf70150ebc2f7",
+      "title": "[RISC-V][LoongArch] Revert Musttail Fixes (#191508)"
+    },
+    "platforms": [
+      "chromiumos"
+    ],
+    "rel_patch_path": "cherry/501417baa60f2eb0a66ca3bb04caf70150ebc2f7.patch",
+    "version_range": {
+      "from": 613893,
+      "until": 614182
+    }
+  },
+  {
+    "metadata": {
+      "author": "Oliver Hunt <oliver@apple.com>",
+      "info": [],
+      "original_sha": "254259b4ed748ea637428e56de8a7e1d402f0afe",
+      "title": "Revert \"Avoid assert in substqualifier (#182707)\" (#196755)"
+    },
+    "platforms": [
+      "chromiumos"
+    ],
+    "rel_patch_path": "cherry/254259b4ed748ea637428e56de8a7e1d402f0afe.patch",
+    "version_range": {
+      "from": 611013,
+      "until": 617814
+    }
+  },
+  {
+    "metadata": {
+      "author": "Matt Arsenault <Matthew.Arsenault@amd.com>",
+      "info": [],
+      "original_sha": "5ec1fb2217c07ee3b610abcf0e40f6b701e6d7f1",
+      "title": "Revert \"RuntimeLibcalls: Add mustprogress to common function attributes (#167080)\" (#191524)"
+    },
+    "platforms": [
+      "chromiumos"
+    ],
+    "rel_patch_path": "cherry/5ec1fb2217c07ee3b610abcf0e40f6b701e6d7f1.patch",
+    "version_range": {
+      "from": 598547,
+      "until": 614195
+    }
+  },
+  {
+    "metadata": {
+      "author": "Lukacma <Marian.Lukac@arm.com>",
+      "info": [],
+      "original_sha": "456bf22d5dfd0010c376190b4fca83d5d7cbb857",
+      "title": "Remove __arm_atomic_store_with_stshh from llvm (#192419)"
+    },
+    "platforms": [
+      "chromiumos"
+    ],
+    "rel_patch_path": "cherry/456bf22d5dfd0010c376190b4fca83d5d7cbb857.patch",
+    "version_range": {
+      "from": 609497,
+      "until": 614953
+    }
+  },
+  {
+    "metadata": {
+      "author": "PiJoules <leonardchan@google.com>",
+      "info": [],
+      "original_sha": "24154a55d698a98e7b6d2aae1778b79f15ce5b09",
+      "title": "Revert \"Reland \"[LTO][LLD] Prevent invalid LTO libfunc transforms (#164916)\"\" (#192741)"
+    },
+    "platforms": [
+      "chromiumos"
+    ],
+    "rel_patch_path": "cherry/24154a55d698a98e7b6d2aae1778b79f15ce5b09.patch",
+    "version_range": {
+      "from": 613530,
+      "until": 615018
+    }
+  },
+  {
+    "metadata": {
+      "author": "Younan Zhang <zyn7109@gmail.com>",
+      "info": [],
+      "original_sha": "0fd821d5e90b0664742e1af9db56d0fd0e6c0285",
+      "title": "[Clang] Track constraint's SubstIndex only if it contains outer parameter packs (#191484)"
+    },
+    "platforms": [
+      "chromiumos"
+    ],
+    "rel_patch_path": "cherry/0fd821d5e90b0664742e1af9db56d0fd0e6c0285.patch",
+    "version_range": {
+      "from": 613458,
+      "until": 614253
+    }
+  },
+  {
+    "metadata": {
+      "author": "Shubham Sandeep Rastogi <Shubham.Rastogi@sony.com>",
+      "info": [],
+      "original_sha": "91fe498ccc31ca2ac3cfe9d83bd8c9e22be3b566",
+      "title": "Revert \"[SelectionDAG] Salvage debuginfo when combining load and z|s ext instrs. (#188544)\" (#193554)"
+    },
+    "platforms": [
+      "chromiumos"
+    ],
+    "rel_patch_path": "cherry/91fe498ccc31ca2ac3cfe9d83bd8c9e22be3b566.patch",
+    "version_range": {
+      "from": 614072,
+      "until": 615587
+    }
+  },
+  {
+    "metadata": {
+      "author": "Chuanqi Xu <yedeng.yd@linux.alibaba.com>",
+      "info": [],
+      "original_sha": "52534a1e1207aa1a983d7ee47e5e3a871b7373e5",
+      "title": "Revert \"[C++20] [Modules] Don't profiling the callee of CXXFoldExpr (#190732)\" (#193975)"
+    },
+    "platforms": [
+      "chromiumos"
+    ],
+    "rel_patch_path": "cherry/52534a1e1207aa1a983d7ee47e5e3a871b7373e5.patch",
+    "version_range": {
+      "from": 613589,
+      "until": 615918
+    }
+  },
+  {
+    "metadata": {
+      "author": "Peter Collingbourne <pcc@google.com>",
+      "info": [],
+      "original_sha": "5aa71ad4223ab4656c6cbec55b605adebc7c36ae",
+      "title": "Revert \"SROA: Recognize llvm.protected.field.ptr intrinsics.\""
+    },
+    "platforms": [
+      "chromiumos"
+    ],
+    "rel_patch_path": "cherry/5aa71ad4223ab4656c6cbec55b605adebc7c36ae.patch",
+    "version_range": {
+      "from": 600357,
+      "until": 616283
+    }
+  },
+  {
+    "metadata": {
+      "author": "David Spickett <david.spickett@arm.com>",
+      "info": [],
+      "original_sha": "aa1be070fbae07581f2e59b2df776f38215f4760",
+      "title": "[lldb] Revert recent changes to HostThreadPosix::Reset (#196306)"
+    },
+    "platforms": [
+      "chromiumos"
+    ],
+    "rel_patch_path": "cherry/aa1be070fbae07581f2e59b2df776f38215f4760.patch",
+    "version_range": {
+      "from": 608055,
+      "until": 617561
+    }
   }
 ]

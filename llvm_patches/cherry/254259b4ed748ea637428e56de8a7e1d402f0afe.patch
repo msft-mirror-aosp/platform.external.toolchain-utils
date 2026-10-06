@@ -1,0 +1,76 @@
+From 36e858d083e8a2615c265c4afb7723477da0435f Mon Sep 17 00:00:00 2001
+From: crostc-worker
+ <crostc-worker@crostc-chrotomation.iam.gserviceaccount.com>
+Date: Sat, 9 May 2026 14:41:02 -0700
+Subject: [PATCH] Revert "Avoid assert in substqualifier (#182707)" (#196755)
+
+This reverts commit e2def106757534b07a2d3ff15ddd48e14b69a66d.
+
+patch.cherry: true
+patch.metadata.author: Oliver Hunt <oliver@apple.com>
+patch.metadata.original_sha: 254259b4ed748ea637428e56de8a7e1d402f0afe
+patch.platforms: chromiumos
+patch.version_range.from: 611013
+patch.version_range.until: 617814
+
+---
+ clang/docs/ReleaseNotes.rst          |  1 -
+ clang/lib/Sema/SemaDecl.cpp          |  4 +---
+ clang/test/SemaTemplate/GH176152.cpp | 12 ------------
+ 3 files changed, 1 insertion(+), 16 deletions(-)
+ delete mode 100644 clang/test/SemaTemplate/GH176152.cpp
+
+diff --git a/clang/docs/ReleaseNotes.rst b/clang/docs/ReleaseNotes.rst
+index b2e62106506f..b28c8512cbf3 100644
+--- a/clang/docs/ReleaseNotes.rst
++++ b/clang/docs/ReleaseNotes.rst
+@@ -431,7 +431,6 @@ Bug Fixes to C++ Support
+ - Fixed an alias template CTAD crash.
+ - Fixed a crash when diagnosing an invalid static member function with an explicit object parameter (#GH177741)
+ - Clang incorrectly instantiated variable specializations outside of the immediate context. (#GH54439)
+-- Fixed a crash when instantiating an invalid out-of-line static data member definition in a local class. (#GH176152)
+ - Fixed a crash when pack expansions are used as arguments for non-pack parameters of built-in templates. (#GH180307)
+ - Fixed a bug where captured variables in non-mutable lambdas were incorrectly treated as mutable 
+   when used inside decltype in the return type. (#GH180460)
+diff --git a/clang/lib/Sema/SemaDecl.cpp b/clang/lib/Sema/SemaDecl.cpp
+index 9f8fc5a187b0..7241ed153bf3 100644
+--- a/clang/lib/Sema/SemaDecl.cpp
++++ b/clang/lib/Sema/SemaDecl.cpp
+@@ -7950,7 +7950,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
+ 
+     if (CurContext->isRecord()) {
+       if (SC == SC_Static) {
+-        if (CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(DC)) {
++        if (const CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(DC)) {
+           // Walk up the enclosing DeclContexts to check for any that are
+           // incompatible with static data members.
+           const DeclContext *FunctionOrMethod = nullptr;
+@@ -7972,8 +7972,6 @@ NamedDecl *Sema::ActOnVariableDeclarator(
+             Diag(D.getIdentifierLoc(),
+                  diag::err_static_data_member_not_allowed_in_local_class)
+                 << Name << RD->getDeclName() << RD->getTagKind();
+-            Invalid = true;
+-            RD->setInvalidDecl();
+           } else if (AnonStruct) {
+             // C++ [class.static.data]p4: Unnamed classes and classes contained
+             // directly or indirectly within unnamed classes shall not contain
+diff --git a/clang/test/SemaTemplate/GH176152.cpp b/clang/test/SemaTemplate/GH176152.cpp
+deleted file mode 100644
+index 7d61aa292982..000000000000
+--- a/clang/test/SemaTemplate/GH176152.cpp
++++ /dev/null
+@@ -1,12 +0,0 @@
+-// RUN: %clang_cc1 -std=c++23 -fsyntax-only -verify %s
+-
+-template <class T> int f(T) {
+-  struct MyClass {
+-    static int staticField;
+-    // expected-error@-1 {{static data member 'staticField' not allowed in local struct 'MyClass'}}
+-  };
+-  int MyClass::staticField = 42;
+-  return 0;
+-}
+-
+-int x = f(0);
+-- 
+2.56.0.rc1.315.gc6ed9934b7-goog
