@@ -4,12 +4,10 @@
 
 """Tests for create_patch_file."""
 
-from pathlib import Path
-import unittest
-
 from llvm_tools import create_patch_file
 from llvm_tools import git_llvm_rev
 from llvm_tools import patch_utils
+from llvm_tools import test_helpers
 
 
 COMMIT_FIXTURE_1 = """Commit Fixture 1
@@ -96,47 +94,53 @@ Change-Id: Iabcedef123456789
 """
 
 
-class TestCreatePatchFile(unittest.TestCase):
+class TestCreatePatchFile(test_helpers.TempDirTestCase):
     """Test harness for create_patch_file."""
 
-    @staticmethod
+    def setUp(self) -> None:
+        # Automatically cleans up.
+        self.tempdir = self.make_tempdir()
+
     def _make_patch_entry(
-        from_: int | None, until: int | None, title: str = "Some title"
+        self,
+        from_: int | None,
+        until: int | None,
+        title: str = "Some title",
+        rel_patch_path: str = "a/path/to/a/patch.patch",
     ) -> patch_utils.PatchEntry:
         return patch_utils.PatchEntry(
-            workdir=Path(),
+            workdir=self.tempdir,
             metadata={
                 "info": [],
                 "title": title,
             },
             platforms=["some platform"],
-            rel_patch_path="a/path/to/a/patch.patch",
+            rel_patch_path=rel_patch_path,
             version_range={"from": from_, "until": until},
         )
 
     def test_find_new_patches_normal(self) -> None:
-        """Test that we only find newer patches applied to a given branch."""
+        """Test that we only find unseen patches applied to a given branch."""
+        (self.tempdir / "cherry").mkdir()
+        (self.tempdir / "cherry" / "abcedf.patch").touch()
+        (self.tempdir / "-B-a.patch").touch()
 
         llvm_rev = git_llvm_rev.Rev(git_llvm_rev.MAIN_BRANCH, 1234)
-        version_ranges = (
-            (1, 2),
-            (5, 100),
-            (1234, 1235),
-            (1, 1235),
-            (None, None),
+        existing_patches = (
+            (1234, 1235, "A", "cherry/abcedf.patch"),
+            (1, 1235, "[B] a", "-B-a.patch"),
+            (1, 1235, "C", "c.patch"),
         )
-        existing_patches = [
-            self._make_patch_entry(from_, until)
-            for from_, until in version_ranges
-        ]
-        branch_version_ranges = ((1, 1984), (1000, 9001))
+        new_patches = (
+            (1, 1984, "D", "cherry/beef0000.patch"),
+            (1000, 9001, "[E] d", "-E-d.patch"),
+        )
         branch_combos = [
             create_patch_file.PatchCombo(
-                self._make_patch_entry(from_, until),
-                "[some contents]",
+                self._make_patch_entry(from_, until, title, path),
+                "example contents here",
             )
-            for from_, until in ((1234, 1235), (1, 1235), (None, None))
-            + branch_version_ranges
+            for from_, until, title, path in existing_patches + new_patches
         ]
         branch_combos.insert(
             0,
@@ -152,11 +156,9 @@ class TestCreatePatchFile(unittest.TestCase):
             patch_entry_combos=branch_combos,
         )
         new_patch_combos = create_patch_file.find_new_patches(
-            branch_context, existing_patches
+            branch_context, frozenset(("C",))
         )
-        self.assertEqual(
-            new_patch_combos, branch_combos[-len(branch_version_ranges) :]
-        )
+        self.assertEqual(new_patch_combos, branch_combos[-len(new_patches) :])
 
     def test_filter_change_id_1(self) -> None:
         """Test filter_change_id."""

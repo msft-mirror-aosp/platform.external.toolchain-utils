@@ -44,6 +44,45 @@ _COMMIT_MESSAGE_END_GUESS = re.compile(r"^---(:? .*)?$")
 _CHROMEOS_SCOPED_EMAIL = (
     "chromeos-scoped@luci-project-accounts.iam.gserviceaccount.com"
 )
+# Titles of patches with filenames that don't match the generated one.
+_EXISTING_ABNORMAL_COMMITS = frozenset(
+    (
+        "Add stubs and headers for nl_types APIs.",
+        "Adds a allowlist of packages that have known memory leaks",
+        "Build generic TF builtins for i386",
+        "Fix for x86 ndk sysroot define being mixed with parameter for i686"
+        " lldb build",
+        'Revert "[Driver] Allow target override containing . in executable'
+        ' name"',
+        'Revert "add_tablegen: Quick fix to reflect LLVM_TABLEGEN to'
+        ' llvm-min-tblgen"',
+        "ValueMapper: Delete unused initializers of replaced appending"
+        " globals.",
+        "[AArch64][llvm] Remove support for FEAT_MPAMv2_VID (#193191)",
+        "[BACKPORT] [lldb][lldb-server] Fix zip file lookup ignoring last"
+        " entry in the zip file (#173966)",
+        "[BOLT] Increase max allocation size to allow BOLTing clang and rustc",
+        "[InstSimplify] Fix Compilation Hang in simplifyExtractValueInst"
+        " (#190279)",
+        "[LoopUnroll] Ignore inlinable calls if unrolling is forced",
+        "[compiler-rt][cmake] v3: Fix check_cxx_compiler_flag calls (#197529)",
+        "[compiler-rt][sanitizer] Remove linux/scc.h (#194116)",
+        "[libc++] Add Android assertion handler (#198831)",
+        "[libc++] Add support for picolibc and newlib in RUNTIMES_USE_LIBC"
+        " (#147956)",
+        "[scudo] Add baseline Scudo config for ChromeOS v2",
+        "clang-12.0-asan-default-path",
+        "cros: add user-enumeration patch",
+        "llvm-17.0-invocation",
+        "llvm-3.9-dwarf-version",
+        "llvm-8.0-clang-executable-detection.v3",
+        "llvm-8.0-clang-executable-detection.v4",
+        "v2: Disable unsigned-integer-overflow checks for std::sort",
+        "v2: Make _LIBCPP_MAKE_OVERRIDABLE_FUNCTION a no-op on baremetal",
+        "v3: [clang][Driver] Add -fexperimental-gccadjacent flag",
+        "v3: lld-10.0-invoke-name",
+    )
+)
 
 
 @dataclasses.dataclass
@@ -185,7 +224,7 @@ def create_branch_contexts(
 
 def find_new_patches(
     branch_context: BranchContext,
-    existing_patches: list[patch_utils.PatchEntry],
+    existing_abnormal_commits: frozenset[str],
 ) -> list[PatchCombo]:
     """Find unseen patches committed along a given branch."""
 
@@ -197,14 +236,6 @@ def find_new_patches(
             branch_context.branch_ref,
         )
         return []
-    applicable_existing = [
-        p
-        for p in existing_patches
-        if p.can_patch_version(branch_context.llvm_rev.number)
-    ]
-    logging.debug("Found applicable patches:")
-    for patch in applicable_existing:
-        logging.debug("* %s", patch.title())
     # We drop the base commit, which should always be the first one. We may
     # want to have a more thorough check, but for now, we'll just have an
     # assert.
@@ -213,22 +244,16 @@ def find_new_patches(
         "branch_patches did not start with a base commit"
         f" (title was '{starting_title}')"
     )
-    # The 1 + is to make sure we skip over the base commit.
-    len_of_existing_and_base = 1 + len(applicable_existing)
-    if len_of_existing_and_base > len(branch_context.patch_entry_combos):
-        logging.warning(
-            "Expected at least %s patches on branch, but found only %s. Did"
-            " you apply the patches from PATCHES.json to the '%s' branch?",
-            len_of_existing_and_base,
-            len(branch_context.patch_entry_combos),
-            branch_context.branch_ref,
-        )
-    new_patch_combos = branch_context.patch_entry_combos[
-        len_of_existing_and_base:
+    new_patch_combos = [
+        combo
+        for combo in branch_context.patch_entry_combos[1:]
+        if combo.entry.title() not in existing_abnormal_commits
+        and not combo.entry.patch_path().exists()
     ]
     if not new_patch_combos:
         logging.info(
-            "No new patches on LLVM branch for '%s'.", branch_context.branch_ref
+            "No new patches on LLVM branch for '%s'.",
+            branch_context.branch_ref,
         )
         return []
     logging.info(
@@ -259,7 +284,6 @@ def _find_branch_refs(
 def _find_new_patch_combos(
     chromiumos_root: Path,
     patch_context: LLVMPatchContext,
-    existing_patches: list[patch_utils.PatchEntry],
     check_all_branches: bool = False,
 ) -> list[PatchCombo]:
     """Find applicable patches for each branch that need to be added."""
@@ -292,7 +316,9 @@ def _find_new_patch_combos(
             "Checking for new commits on branch '%s'",
             container.branch_ref,
         )
-        new_patch_combos += find_new_patches(container, existing_patches)
+        new_patch_combos += find_new_patches(
+            container, _EXISTING_ABNORMAL_COMMITS
+        )
     return new_patch_combos
 
 
@@ -395,7 +421,6 @@ def main(argv: list[str]) -> None:
     new_patch_combos = _find_new_patch_combos(
         args.chromiumos_root,
         patch_context,
-        existing_patches,
         args.check_all_branches,
     )
     if not new_patch_combos:
