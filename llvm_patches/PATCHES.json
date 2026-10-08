@@ -1308,5 +1308,21 @@
       "from": 608055,
       "until": 617561
     }
+  },
+  {
+    "metadata": {
+      "author": "Khem Raj <khem.raj@oss.qualcomm.com>",
+      "info": [],
+      "original_sha": "8119f1854948b50358bbfaea08f207f51970f06c",
+      "title": "libcxxabi: declare __gnu_unwind_frame in cxa_personality (#189787)"
+    },
+    "platforms": [
+      "chromiumos"
+    ],
+    "rel_patch_path": "cherry/8119f1854948b50358bbfaea08f207f51970f06c.patch",
+    "version_range": {
+      "from": 600745,
+      "until": 616126
+    }
   }
 ]
